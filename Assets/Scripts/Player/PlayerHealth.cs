@@ -24,6 +24,7 @@ namespace Platformer2D
         private int currentHealth;
         private bool isInvulnerable = false;
         private bool isDead = false;
+        private bool isPaused = false;
         private PlayerController2D controller;
         private KiwiController kiwiController;
         private KiwiCombat kiwiCombat;
@@ -31,12 +32,14 @@ namespace Platformer2D
         public int CurrentHealth => currentHealth;
         public int MaxHealth => maxHealth;
         public bool IsDead => isDead;
+        public bool IsPaused => isPaused;
 
         private void Awake()
         {
             // Asegurar que el tiempo siempre esté activo al entrar o reiniciar el nivel
             Time.timeScale = 1f;
             isDead = false;
+            isPaused = false;
 
             controller = GetComponent<PlayerController2D>();
             kiwiController = GetComponent<KiwiController>();
@@ -66,6 +69,43 @@ namespace Platformer2D
                 {
                     ReturnToMainMenu();
                 }
+                return;
+            }
+
+            // Atajo para alternar Pausa con Escape o P
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
+            {
+                TogglePause();
+            }
+
+            // Atajos dentro de la pausa
+            if (isPaused)
+            {
+                if (Input.GetKeyDown(KeyCode.R)) RetryLevel();
+                else if (Input.GetKeyDown(KeyCode.H)) ReturnToHub();
+                else if (Input.GetKeyDown(KeyCode.M)) ReturnToMainMenu();
+            }
+        }
+
+        public void TogglePause()
+        {
+            if (isDead) return;
+            isPaused = !isPaused;
+            Time.timeScale = isPaused ? 0f : 1f;
+            KiwiAudio.PlayDoubleJump();
+        }
+
+        public void ReturnToHub()
+        {
+            Time.timeScale = 1f;
+            isPaused = false;
+            if (Application.CanStreamedLevelBeLoaded("ParamoToxico"))
+            {
+                SceneManager.LoadScene("ParamoToxico");
+            }
+            else
+            {
+                ReturnToMainMenu();
             }
         }
 
@@ -239,6 +279,12 @@ namespace Platformer2D
 
         private void OnGUI()
         {
+            if (isPaused && !isDead)
+            {
+                RenderPauseMenu();
+                return;
+            }
+
             if (!isDead) return;
 
             // 1. Telón oscuro de fondo con viñeta
@@ -319,6 +365,96 @@ namespace Platformer2D
             hintStyle.fontSize = 11;
             hintStyle.normal.textColor = new Color(0.6f, 0.65f, 0.75f);
             GUI.Label(new Rect(winX, winY + 274, winW, 20), "Presiona [R] para volver a intentarlo o [M] para reiniciar desde el Menú", hintStyle);
+        }
+
+        private void RenderPauseMenu()
+        {
+            float sw = Screen.width;
+            float sh = Screen.height;
+
+            Color prevGuiColor = GUI.color;
+            GUI.color = new Color(0.04f, 0.07f, 0.12f, 0.88f);
+            GUI.DrawTexture(new Rect(0, 0, sw, sh), Texture2D.whiteTexture);
+            GUI.color = prevGuiColor;
+
+            float winW = Mathf.Min(500f, sw * 0.92f);
+            float winH = 390f;
+            float winX = (sw - winW) / 2f;
+            float winY = (sh - winH) / 2f;
+
+            GUI.Box(new Rect(winX, winY, winW, winH), GUIContent.none);
+
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
+            titleStyle.alignment = TextAnchor.MiddleCenter;
+            titleStyle.fontSize = 22;
+            titleStyle.fontStyle = FontStyle.Bold;
+            titleStyle.normal.textColor = new Color(0.3f, 0.85f, 1f);
+            GUI.Label(new Rect(winX, winY + 16, winW, 32), "⏸️  JUEGO EN PAUSA", titleStyle);
+
+            string regionName = SceneManager.GetActiveScene().name;
+            GUIStyle subStyle = new GUIStyle(GUI.skin.label);
+            subStyle.alignment = TextAnchor.MiddleCenter;
+            subStyle.fontSize = 12;
+            subStyle.normal.textColor = new Color(0.8f, 0.85f, 0.95f);
+            GUI.Label(new Rect(winX, winY + 48, winW, 22), $"Región actual: {regionName}  |  Semillas: {SimpleHeartHUD.seedsCollected}", subStyle);
+
+            float btnW = winW - 80;
+            float btnH = 38;
+            float btnX = winX + 40;
+
+            Color prevBg = GUI.backgroundColor;
+            GUIStyle btnStyle = new GUIStyle(GUI.skin.button);
+            btnStyle.fontSize = 13;
+            btnStyle.fontStyle = FontStyle.Bold;
+            btnStyle.normal.textColor = Color.white;
+
+            // Botón 1: Continuar
+            GUI.backgroundColor = new Color(0.15f, 0.65f, 0.9f);
+            if (GUI.Button(new Rect(btnX, winY + 80, btnW, btnH), "▶   CONTINUAR PARTIDA   [ESC / P]", btnStyle))
+            {
+                TogglePause();
+            }
+
+            // Botón 2: Reintentar Nivel
+            GUI.backgroundColor = new Color(0.2f, 0.75f, 0.4f);
+            if (GUI.Button(new Rect(btnX, winY + 126, btnW, btnH), "🔄  REINTENTAR NIVEL   [R]", btnStyle))
+            {
+                RetryLevel();
+            }
+
+            // Botón 3: Viajar al Páramo Tóxico (Hub)
+            GUI.backgroundColor = new Color(0.55f, 0.35f, 0.85f);
+            if (GUI.Button(new Rect(btnX, winY + 172, btnW, btnH), "🗺   PÁRAMO TÓXICO (HUB)   [H]", btnStyle))
+            {
+                ReturnToHub();
+            }
+
+            // Botón 4: Menú Principal
+            GUI.backgroundColor = new Color(0.85f, 0.3f, 0.25f);
+            if (GUI.Button(new Rect(btnX, winY + 218, btnW, btnH), "🏠   MENÚ PRINCIPAL   [M]", btnStyle))
+            {
+                ReturnToMainMenu();
+            }
+            GUI.backgroundColor = prevBg;
+
+            // Caja de Controles en la parte inferior
+            GUI.Box(new Rect(winX + 25, winY + 270, winW - 50, 100), GUIContent.none);
+
+            GUIStyle ctrlTitle = new GUIStyle(GUI.skin.label);
+            ctrlTitle.alignment = TextAnchor.MiddleCenter;
+            ctrlTitle.fontSize = 11;
+            ctrlTitle.fontStyle = FontStyle.Bold;
+            ctrlTitle.normal.textColor = new Color(1f, 0.85f, 0.35f);
+            GUI.Label(new Rect(winX + 25, winY + 274, winW - 50, 18), "GUÍA RÁPIDA DE CONTROLES", ctrlTitle);
+
+            GUIStyle ctrlBody = new GUIStyle(GUI.skin.label);
+            ctrlBody.alignment = TextAnchor.MiddleCenter;
+            ctrlBody.fontSize = 11;
+            ctrlBody.normal.textColor = Color.white;
+            GUI.Label(new Rect(winX + 30, winY + 294, winW - 60, 68),
+                "• Moverse: [A / D] o [← / →]    • Saltar / Doble: [Espacio] o [W]\n" +
+                "• Torbellino / Dash: [Shift]    • Daga Purificadora: [J] o [Clic]\n" +
+                "• Pisotón: Caer sobre enemigos  • Portales / Altares: [E]", ctrlBody);
         }
     }
 }

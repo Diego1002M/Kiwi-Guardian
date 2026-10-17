@@ -296,6 +296,9 @@ public class PlasticWhaleBossAI : MonoBehaviour, IDamageable
     private void Die()
     {
         isDead = true;
+        PlayerPrefs.SetInt("Boss_Water_Defeated", 1);
+        PlayerPrefs.SetInt("Purified_Water", 1);
+        PlayerPrefs.Save();
         if (col != null) col.enabled = false;
 
         KiwiAudio.PlayVictory();

@@ -45,6 +45,9 @@ public class FireSlimeAI : MonoBehaviour, IDamageable, IElementalTarget
 
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         rb.freezeRotation = true;
+
+        if (rewardSeedSprite == null)
+            rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed");
     }
 
     private void Start()

@@ -363,6 +363,9 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
     private void Die()
     {
         isDead = true;
+        PlayerPrefs.SetInt("Boss_Earth_Defeated", 1);
+        PlayerPrefs.SetInt("Purified_Earth", 1);
+        PlayerPrefs.Save();
         if (col != null) col.enabled = false;
 
         KiwiAudio.PlayVictory();

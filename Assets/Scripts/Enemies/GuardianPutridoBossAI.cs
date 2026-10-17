@@ -353,6 +353,9 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
     private void Die()
     {
         isDead = true;
+        PlayerPrefs.SetInt("Boss_Forest_Defeated", 1);
+        PlayerPrefs.SetInt("Purified_Forest", 1);
+        PlayerPrefs.Save();
         if (col != null) col.enabled = false;
 
         KiwiAudio.PlayVictory();

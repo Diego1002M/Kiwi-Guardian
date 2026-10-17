@@ -14,8 +14,9 @@ public class ScrapTurretAI : MonoBehaviour, IDamageable
     [SerializeField] private float shootInterval = 2.5f;
     [SerializeField] private float detectionRange = 9f;
 
-    [Header("Recompensa")]
+    [Header("Recompensa y Proyectil")]
     [SerializeField] private Sprite rewardSeedSprite;
+    [SerializeField] private Sprite projectileSprite;
 
     private int currentHealth;
     private Transform playerTransform;
@@ -34,6 +35,11 @@ public class ScrapTurretAI : MonoBehaviour, IDamageable
         if (sr != null) originalColor = sr.color;
         col = GetComponent<Collider2D>();
         currentHealth = maxHealth;
+
+        if (projectileSprite == null)
+            projectileSprite = Resources.Load<Sprite>("Sprites/GearProjectile");
+        if (rewardSeedSprite == null)
+            rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed");
     }
 
     private void Start()
@@ -85,8 +91,8 @@ public class ScrapTurretAI : MonoBehaviour, IDamageable
             bolt.transform.localScale = new Vector3(0.9f, 0.9f, 1f);
 
             SpriteRenderer bSr = bolt.AddComponent<SpriteRenderer>();
-            bSr.sprite = sr.sprite;
-            bSr.color = Color.yellow;
+            bSr.sprite = projectileSprite != null ? projectileSprite : sr.sprite;
+            bSr.color = Color.white;
 
             CircleCollider2D c = bolt.AddComponent<CircleCollider2D>();
             c.isTrigger = true;

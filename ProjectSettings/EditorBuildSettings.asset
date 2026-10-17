@@ -9,11 +9,11 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: e35dd81e084fc64409bace48c6752cd0
   - enabled: 1
-    path: Assets/Scenes/MarDePlastico.unity
-    guid: 8ef9698ae031be34694677d9189a67c9
-  - enabled: 1
     path: Assets/Scenes/ParamoToxico.unity
     guid: ed59aa67094ea6d48af60d09d15232e3
+  - enabled: 1
+    path: Assets/Scenes/MarDePlastico.unity
+    guid: 8ef9698ae031be34694677d9189a67c9
   - enabled: 1
     path: Assets/Scenes/CiudadDeHumo.unity
     guid: b0e68d4ddf9b94c499648f871663e541

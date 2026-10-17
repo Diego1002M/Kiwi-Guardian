@@ -42,6 +42,9 @@ public class TrashFlyAI : MonoBehaviour, IDamageable
         rb.bodyType = RigidbodyType2D.Kinematic;
         rb.useFullKinematicContacts = true;
         rb.gravityScale = 0f;
+
+        if (rewardSeedSprite == null)
+            rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed");
     }
 
     private void Start()

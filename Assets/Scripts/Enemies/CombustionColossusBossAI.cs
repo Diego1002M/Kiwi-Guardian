@@ -360,6 +360,9 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
     private void Die()
     {
         isDead = true;
+        PlayerPrefs.SetInt("Boss_Air_Defeated", 1);
+        PlayerPrefs.SetInt("Purified_Air", 1);
+        PlayerPrefs.Save();
         if (col != null) col.enabled = false;
 
         KiwiAudio.PlayVictory();
