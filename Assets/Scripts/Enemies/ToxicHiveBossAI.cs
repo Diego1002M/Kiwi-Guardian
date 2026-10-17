@@ -38,6 +38,8 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
     private Collider2D col;
     private Color originalColor;
     private Vector3 baseScale;
+    private Sprite acidSprite;
+    private Sprite pustuleSprite;
 
     public static ToxicHiveBossAI ActiveBoss { get; private set; }
     public int CurrentHealth => currentHealth;
@@ -68,6 +70,9 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
 
         currentHealth = maxHealth;
         ActiveBoss = this;
+        acidSprite = Resources.Load<Sprite>("Sprites/AcidGlob".Replace(""", ""));
+        pustuleSprite = Resources.Load<Sprite>("Sprites/ThornProjectile".Replace(""", ""));
+        if (rewardSeedSprite == null) rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed".Replace(""", ""));
     }
 
     private void Start()
@@ -162,8 +167,8 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
             glob.transform.localScale = new Vector3(0.85f, 0.85f, 1f);
 
             SpriteRenderer gSr = glob.AddComponent<SpriteRenderer>();
-            gSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
-            gSr.color = new Color(0.3f, 1f, 0.2f, 0.95f); // Verde radioactivo
+            gSr.sprite = acidSprite != null ? acidSprite : fireballSprite;
+            gSr.color = Color.white; // Verde radioactivo
             gSr.sortingOrder = 5;
 
             CircleCollider2D cc = glob.AddComponent<CircleCollider2D>();
@@ -207,8 +212,8 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
             needle.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
 
             SpriteRenderer nSr = needle.AddComponent<SpriteRenderer>();
-            nSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
-            nSr.color = new Color(0.8f, 0.9f, 0.1f, 0.95f); // Amarillo bilis
+            nSr.sprite = pustuleSprite != null ? pustuleSprite : acidSprite;
+            nSr.color = Color.white; // Amarillo bilis
             nSr.sortingOrder = 5;
 
             CircleCollider2D cc = needle.AddComponent<CircleCollider2D>();
@@ -230,7 +235,7 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
         larva.transform.localScale = new Vector3(0.65f, 0.65f, 1f);
 
         SpriteRenderer lSr = larva.AddComponent<SpriteRenderer>();
-        lSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
+        lSr.sprite = acidSprite != null ? acidSprite : fireballSprite;
         lSr.color = new Color(0.9f, 0.85f, 0.7f, 1f); // Tono larva beige
         lSr.sortingOrder = 4;
 
@@ -259,8 +264,8 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
             drop.transform.localScale = new Vector3(0.55f, 0.8f, 1f);
 
             SpriteRenderer dSr = drop.AddComponent<SpriteRenderer>();
-            dSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
-            dSr.color = new Color(0.4f, 1f, 0.15f, 0.95f);
+            dSr.sprite = acidSprite != null ? acidSprite : fireballSprite;
+            dSr.color = Color.white;
             dSr.sortingOrder = 5;
 
             CircleCollider2D cc = drop.AddComponent<CircleCollider2D>();

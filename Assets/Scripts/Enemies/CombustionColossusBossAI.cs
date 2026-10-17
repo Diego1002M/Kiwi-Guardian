@@ -4,8 +4,7 @@ using Platformer2D;
 
 /// <summary>
 /// Jefe Regional de Ciudad de Humo: El Coloso de la Combustión Infame (Espíritu del Aire Corrompido).
-/// Ingenio mecánico alimentado por carbón y chimeneas tóxicas.
-/// Combate de 2 fases con morteros de humo, llamaradas industriales y modo sobrecalentamiento.
+/// Combate de 2 fases con morteros de smog, llamaradas de vapor y modo sobrecalentamiento.
 /// DEBILIDAD CRÍTICA AL AGUA: Las dagas de agua [3 / E] apagan sus calderas y causan daño doble (2x).
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
@@ -37,7 +36,11 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
     private Rigidbody2D rb;
     private Collider2D col;
     private Color originalColor;
-    private Vector3 basePosition;
+
+    // Sprites dedicados de ataques (evita clonar al jefe)
+    private Sprite smogBombSprite;
+    private Sprite steamJetSprite;
+    private Sprite gearSprite;
 
     public static CombustionColossusBossAI ActiveBoss { get; private set; }
     public int CurrentHealth => currentHealth;
@@ -58,8 +61,13 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         rb.gravityScale = 0f;
 
         currentHealth = maxHealth;
-        basePosition = transform.position;
         ActiveBoss = this;
+
+        // Cargar sprites dedicados
+        smogBombSprite = Resources.Load<Sprite>("Sprites/SmogBomb");
+        steamJetSprite = Resources.Load<Sprite>("Sprites/SteamFlameJet");
+        gearSprite = Resources.Load<Sprite>("Sprites/GearProjectile");
+        if (rewardSeedSprite == null) rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed");
     }
 
     private void Start()
@@ -88,7 +96,7 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         float distToPlayer = Vector2.Distance(transform.position, playerTransform.position);
         if (distToPlayer > 18f) return;
 
-        // 1. Patrulla pesada del Coloso por la arena de chimeneas
+        // 1. Patrulla del Coloso
         if (!isAttacking)
         {
             float speed = isRaging ? rageWalkSpeed : walkSpeed;
@@ -118,7 +126,7 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
             nextAttackTime = Time.time + currentInterval;
         }
 
-        // 3. Fase de Furia: Embestida veloz a vapor con sobrecalentamiento
+        // 3. Fase de Furia: Embestida veloz a vapor
         if (isRaging && Time.time >= nextChargeTime && !isAttacking)
         {
             StartCoroutine(OverheatChargeAttack());
@@ -126,7 +134,7 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         }
     }
 
-    // Ataque 1: Mortero de Smog disparado desde las chimeneas en parábola
+    // Ataque 1: Mortero de Smog disparado desde las chimeneas (utiliza SmogBomb.png)
     private IEnumerator SmogMortarBarrage()
     {
         isAttacking = true;
@@ -145,11 +153,11 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
             GameObject mortar = new GameObject("BombaHumo");
             mortar.tag = "Hazard";
             mortar.transform.position = spawnPos;
-            mortar.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
+            mortar.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
 
             SpriteRenderer mSr = mortar.AddComponent<SpriteRenderer>();
-            mSr.sprite = projectileSprite != null ? projectileSprite : sr.sprite;
-            mSr.color = new Color(0.25f, 0.25f, 0.3f, 0.95f); // Gris carbón/hollín
+            mSr.sprite = smogBombSprite != null ? smogBombSprite : projectileSprite;
+            mSr.color = Color.white;
             mSr.sortingOrder = 5;
 
             CircleCollider2D cc = mortar.AddComponent<CircleCollider2D>();
@@ -175,13 +183,13 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         return new Vector2(vx, vy);
     }
 
-    // Ataque 2: Chorro de Fuego/Vapor Industrial horizontal
+    // Ataque 2: Chorro de Fuego/Vapor Industrial (utiliza SteamFlameJet.png)
     private IEnumerator SteamJetBlast()
     {
         isAttacking = true;
         KiwiAudio.PlayEnemyHit();
 
-        // Breve aviso: humo naranja en la boca
+        // Breve aviso en el jefe
         if (sr != null) sr.color = new Color(1f, 0.6f, 0.2f);
         yield return new WaitForSeconds(0.45f);
         if (sr != null && !isDead) sr.color = isRaging ? new Color(1f, 0.3f, 0.3f) : originalColor;
@@ -190,17 +198,18 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         CameraFollow2D.Shake(0.3f, 0.35f);
 
         Vector2 dir = (playerTransform.position.x > transform.position.x) ? Vector2.right : Vector2.left;
-        Vector3 blastSpawn = transform.position + (Vector3)dir * 1.2f + Vector3.up * 0.2f;
+        Vector3 blastSpawn = transform.position + (Vector3)dir * 1.5f + Vector3.up * 0.2f;
 
-        GameObject jet = new GameObject("ChorroVapor");
+        GameObject jet = new GameObject("ChorroVaporArdiente");
         jet.tag = "Hazard";
         jet.transform.position = blastSpawn;
-        jet.transform.localScale = new Vector3(2.4f, 1.2f, 1f);
+        jet.transform.localScale = new Vector3(1.8f, 1.4f, 1f);
 
         SpriteRenderer jSr = jet.AddComponent<SpriteRenderer>();
-        jSr.sprite = sr.sprite;
-        jSr.color = new Color(1f, 0.45f, 0.1f, 0.9f); // Fuego y vapor ardiente
+        jSr.sprite = steamJetSprite != null ? steamJetSprite : smogBombSprite;
+        jSr.color = Color.white;
         jSr.sortingOrder = 4;
+        if (dir.x < 0) jSr.flipX = true;
 
         BoxCollider2D bc = jet.AddComponent<BoxCollider2D>();
         bc.isTrigger = true;
@@ -212,7 +221,7 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         isAttacking = false;
     }
 
-    // Ataque 3: Engranaje dentado rebotador
+    // Ataque 3: Engranaje Dentado Rebotador (utiliza GearProjectile.png)
     private void ShootGearProjectile()
     {
         if (playerTransform == null) return;
@@ -222,11 +231,11 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         GameObject gear = new GameObject("EngranajeRebotador");
         gear.tag = "Hazard";
         gear.transform.position = transform.position + Vector3.up * 0.4f;
-        gear.transform.localScale = new Vector3(0.85f, 0.85f, 1f);
+        gear.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
 
         SpriteRenderer gSr = gear.AddComponent<SpriteRenderer>();
-        gSr.sprite = projectileSprite != null ? projectileSprite : sr.sprite;
-        gSr.color = new Color(0.75f, 0.55f, 0.35f, 1f); // Bronce dentado
+        gSr.sprite = gearSprite != null ? gearSprite : smogBombSprite;
+        gSr.color = Color.white;
         gSr.sortingOrder = 5;
 
         CircleCollider2D cc = gear.AddComponent<CircleCollider2D>();
@@ -236,14 +245,13 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         gear.AddComponent<BossProjectile>().Setup(dir, 9.0f);
     }
 
-    // Fase de Furia: Embestida a Vapor por Sobrecalentamiento
+    // Fase de Furia: Embestida por Sobrecalentamiento
     private IEnumerator OverheatChargeAttack()
     {
         isAttacking = true;
         KiwiAudio.PlayBossRoar();
         CameraFollow2D.Shake(0.4f, 0.4f);
 
-        // Resplandor de sobrecalentamiento
         if (sr != null) sr.color = new Color(1f, 0.2f, 0.1f);
         yield return new WaitForSeconds(0.4f);
 
@@ -257,7 +265,6 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
             chargeTimer += Time.deltaTime;
             transform.Translate(Vector3.right * chargeDir * 8.5f * Time.deltaTime, Space.World);
 
-            // Dejar estela de chispas o partículas
             if (chargeTimer % 0.2f < 0.05f)
             {
                 CameraFollow2D.Shake(0.1f, 0.1f);
@@ -291,7 +298,6 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         currentHealth -= finalDmg;
         KiwiAudio.PlayEnemyHit();
 
-        // Activar Sobrecalentamiento (<50% vida)
         if (!isRaging && currentHealth <= maxHealth / 2)
         {
             isRaging = true;
@@ -312,7 +318,7 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
 
     private IEnumerator WaterFlash()
     {
-        if (sr != null) sr.color = new Color(0.2f, 0.8f, 1f); // Enfriamiento por agua
+        if (sr != null) sr.color = new Color(0.2f, 0.8f, 1f);
         yield return new WaitForSeconds(0.18f);
         if (sr != null && !isDead) sr.color = isRaging ? new Color(1f, 0.3f, 0.3f) : originalColor;
     }
@@ -365,7 +371,7 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
     {
         float timer = 0f;
         float duration = 2.2f;
-        Color pureAirColor = new Color(0.5f, 0.9f, 1f, 0.6f); // Brisa pura y cristalina de las alturas
+        Color pureAirColor = new Color(0.5f, 0.9f, 1f, 0.6f);
 
         if (rewardSeedSprite != null)
         {
@@ -404,14 +410,12 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         float dist = Vector2.Distance(transform.position, playerTransform.position);
         if (dist > 18f) return;
 
-        // Barra de Vida Épica del Jefe en la parte superior
         float screenW = Screen.width;
         float barWidth = Mathf.Min(420f, screenW * 0.65f);
         float barHeight = 20f;
         float barX = (screenW - barWidth) / 2f;
         float barY = 30f;
 
-        // Título del Jefe
         GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
         titleStyle.alignment = TextAnchor.MiddleCenter;
         titleStyle.fontSize = 15;
@@ -420,54 +424,19 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         string bossTitle = isRaging ? "⚠ COLOSO DE LA COMBUSTIÓN - [SOBRECALENTAMIENTO] ⚠" : "EL COLOSO DE LA COMBUSTIÓN INFAME (ESPÍRITU DEL AIRE)";
         GUI.Label(new Rect(barX - 80, barY - 26, barWidth + 160, 24), bossTitle, titleStyle);
 
-        // Marco y Fondo
         GUI.Box(new Rect(barX - 3, barY - 3, barWidth + 6, barHeight + 6), GUIContent.none);
 
-        // Barra de relleno con gradiente dinámico
         float healthPct = Mathf.Clamp01((float)currentHealth / maxHealth);
         Color prevColor = GUI.color;
         GUI.color = isRaging ? Color.Lerp(Color.red, Color.yellow, healthPct) : Color.Lerp(new Color(0.8f, 0.3f, 0.1f), new Color(1f, 0.8f, 0.3f), healthPct);
         GUI.DrawTexture(new Rect(barX, barY, barWidth * healthPct, barHeight), Texture2D.whiteTexture);
         GUI.color = prevColor;
 
-        // Texto numérico de salud
         GUIStyle hpStyle = new GUIStyle(GUI.skin.label);
         hpStyle.alignment = TextAnchor.MiddleCenter;
         hpStyle.fontSize = 12;
         hpStyle.fontStyle = FontStyle.Bold;
         hpStyle.normal.textColor = Color.white;
         GUI.Label(new Rect(barX, barY - 1, barWidth, barHeight), $"{currentHealth} / {maxHealth}", hpStyle);
-    }
-}
-
-/// <summary>
-/// Bomba de humo que explota al chocar contra el suelo o el jugador.
-/// </summary>
-public class SmogBombExplosion : MonoBehaviour
-{
-    private void Start()
-    {
-        Destroy(gameObject, 4.0f);
-    }
-
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-        if (collision.CompareTag("Player"))
-        {
-            PlayerHealth health = collision.GetComponent<PlayerHealth>();
-            if (health != null) health.TakeDamage(1, transform.position);
-            Explode();
-        }
-        else if (collision.gameObject.layer == LayerMask.NameToLayer("Ground"))
-        {
-            Explode();
-        }
-    }
-
-    private void Explode()
-    {
-        KiwiAudio.PlayFlyPop();
-        CameraFollow2D.Shake(0.15f, 0.15f);
-        Destroy(gameObject);
     }
 }

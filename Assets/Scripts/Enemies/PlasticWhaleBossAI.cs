@@ -37,6 +37,8 @@ public class PlasticWhaleBossAI : MonoBehaviour, IDamageable
     private Collider2D col;
     private Color originalColor;
     private Vector3 basePosition;
+    private Sprite tsunamiSprite;
+    private Sprite wasteSprite;
 
     public static PlasticWhaleBossAI ActiveBoss { get; private set; }
     public int CurrentHealth => currentHealth;
@@ -57,6 +59,9 @@ public class PlasticWhaleBossAI : MonoBehaviour, IDamageable
         currentHealth = maxHealth;
         basePosition = transform.position;
         ActiveBoss = this;
+        tsunamiSprite = Resources.Load<Sprite>("Sprites/TsunamiWave");
+        wasteSprite = Resources.Load<Sprite>("Sprites/AcidGlob");
+        if (rewardSeedSprite == null) rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed");
     }
 
     private void Start()
@@ -151,8 +156,8 @@ public class PlasticWhaleBossAI : MonoBehaviour, IDamageable
         wave.transform.localScale = new Vector3(2.0f, 0.9f, 1f);
 
         SpriteRenderer wSr = wave.AddComponent<SpriteRenderer>();
-        wSr.sprite = projectileSprite != null ? projectileSprite : sr.sprite;
-        wSr.color = new Color(0.1f, 0.7f, 0.9f, 0.9f); // Azul tóxico oleoso
+        wSr.sprite = tsunamiSprite != null ? tsunamiSprite : projectileSprite;
+        wSr.color = Color.white; // Azul tóxico oleoso
         wSr.sortingOrder = 4;
 
         BoxCollider2D c = wave.AddComponent<BoxCollider2D>();
@@ -181,8 +186,8 @@ public class PlasticWhaleBossAI : MonoBehaviour, IDamageable
         proj.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
 
         SpriteRenderer pSr = proj.AddComponent<SpriteRenderer>();
-        pSr.sprite = projectileSprite != null ? projectileSprite : (rewardSeedSprite != null ? rewardSeedSprite : sr.sprite);
-        pSr.color = new Color(0.7f, 0.2f, 0.9f);
+        pSr.sprite = wasteSprite != null ? wasteSprite : projectileSprite;
+        pSr.color = Color.white;
         pSr.sortingOrder = 3;
 
         CircleCollider2D c = proj.AddComponent<CircleCollider2D>();

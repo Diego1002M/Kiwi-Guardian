@@ -4,8 +4,7 @@ using Platformer2D;
 
 /// <summary>
 /// Jefe Regional del Bosque Marchito: El Guardián Pútrido (Espíritu de la Tierra/Bosque Corrompido).
-/// Titán vegetal milenario corrompido por vertidos químicos.
-/// Combate de 2 fases con erupción de raíces, proyectiles de astillas y lluvia de esporas.
+/// Combate de 2 fases con erupción de raíces punzantes, ráfagas de astillas y lluvia de esporas.
 /// DEBILIDAD CRÍTICA AL FUEGO: Las dagas de fuego [2 / Q] le causan daño doble (2x).
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
@@ -37,7 +36,11 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
     private Rigidbody2D rb;
     private Collider2D col;
     private Color originalColor;
-    private Vector3 basePosition;
+
+    // Sprites dedicados de ataques (para evitar que el jefe se clone a sí mismo)
+    private Sprite spikeSprite;
+    private Sprite thornSprite;
+    private Sprite shockwaveSprite;
 
     public static GuardianPutridoBossAI ActiveBoss { get; private set; }
     public int CurrentHealth => currentHealth;
@@ -58,8 +61,13 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         rb.gravityScale = 0f;
 
         currentHealth = maxHealth;
-        basePosition = transform.position;
         ActiveBoss = this;
+
+        // Cargar sprites dedicados de ataques
+        spikeSprite = Resources.Load<Sprite>("Sprites/RootSpikeHazard");
+        thornSprite = Resources.Load<Sprite>("Sprites/ThornProjectile");
+        shockwaveSprite = Resources.Load<Sprite>("Sprites/EarthquakeShockwave");
+        if (rewardSeedSprite == null) rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed");
     }
 
     private void Start()
@@ -88,13 +96,12 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         float distToPlayer = Vector2.Distance(transform.position, playerTransform.position);
         if (distToPlayer > 18f) return;
 
-        // 1. Patrulla imponente del Guardián por el suelo de la arena
+        // 1. Patrulla del Guardián por la arena
         if (!isAttacking)
         {
             float speed = isRaging ? rageWalkSpeed : walkSpeed;
             transform.Translate(Vector3.right * moveDirection * speed * Time.deltaTime, Space.World);
 
-            // Cambiar de dirección al llegar a los límites
             if (transform.position.x <= arenaMinX)
             {
                 moveDirection = 1;
@@ -127,41 +134,42 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         }
     }
 
-    // Ataque 1: Erupción de Raíces bajo los pies del jugador
+    // Ataque 1: Erupción de Raíces Punzantes (utiliza sprite dedicado de raíz, nunca el del jefe)
     private IEnumerator RootEruptionAttack()
     {
         isAttacking = true;
         KiwiAudio.PlayEnemyHit();
 
-        // Breve aviso visual en la posición del jugador
         Vector3 targetPos = playerTransform.position;
+
+        // Aviso visual en el suelo (círculo rojo / advertencia)
         GameObject warningTelegraph = new GameObject("AvisoRaiz");
-        warningTelegraph.transform.position = new Vector3(targetPos.x, targetPos.y - 0.5f, 0f);
+        warningTelegraph.transform.position = new Vector3(targetPos.x, targetPos.y - 0.45f, 0f);
+        warningTelegraph.transform.localScale = new Vector3(1.2f, 0.25f, 1f);
         SpriteRenderer wSr = warningTelegraph.AddComponent<SpriteRenderer>();
-        wSr.sprite = sr.sprite;
-        wSr.color = new Color(0.9f, 0.3f, 0.1f, 0.4f);
-        warningTelegraph.transform.localScale = new Vector3(0.4f, 0.15f, 1f);
+        wSr.sprite = thornSprite != null ? thornSprite : Sprite.Create(Texture2D.whiteTexture, new Rect(0,0,4,4), Vector2.one * 0.5f);
+        wSr.color = new Color(1f, 0.2f, 0.1f, 0.5f);
 
         yield return new WaitForSeconds(0.6f);
         Destroy(warningTelegraph);
 
-        // ¡Erupción de Raíz punzante!
+        // ¡Erupción de Raíz punzante real!
         CameraFollow2D.Shake(0.2f, 0.25f);
         KiwiAudio.PlayBossRoar();
 
         GameObject rootSpike = new GameObject("RaizPunzante");
         rootSpike.tag = "Hazard";
-        rootSpike.transform.position = new Vector3(targetPos.x, targetPos.y - 0.3f, 0f);
-        rootSpike.transform.localScale = new Vector3(0.9f, 2.2f, 1f);
+        rootSpike.transform.position = new Vector3(targetPos.x, targetPos.y + 0.3f, 0f);
+        rootSpike.transform.localScale = new Vector3(1.6f, 1.8f, 1f);
 
         SpriteRenderer rSr = rootSpike.AddComponent<SpriteRenderer>();
-        rSr.sprite = sr.sprite;
-        rSr.color = new Color(0.45f, 0.28f, 0.15f, 1f); // Color madera infectada
+        rSr.sprite = spikeSprite != null ? spikeSprite : thornSprite;
+        rSr.color = Color.white;
         rSr.sortingOrder = 4;
 
         BoxCollider2D bc = rootSpike.AddComponent<BoxCollider2D>();
         bc.isTrigger = true;
-        bc.size = new Vector2(0.8f, 1.8f);
+        bc.size = new Vector2(0.9f, 1.6f);
 
         rootSpike.AddComponent<SpikeHazard>().Setup(1.2f);
 
@@ -169,7 +177,7 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         isAttacking = false;
     }
 
-    // Ataque 2: Ráfaga de Astillas y Espinas Corruptas
+    // Ataque 2: Ráfaga de Astillas y Espinas de Madera (utiliza ThornProjectile.png)
     private void ShootThornBarrage()
     {
         if (playerTransform == null) return;
@@ -183,28 +191,32 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         }
     }
 
-    // Ataque 3: Lluvia de Esporas Venenosas desde el follaje
+    // Ataque 3: Lluvia de Esporas desde el dosel
     private void ShootSporeRain()
     {
         KiwiAudio.PlayEnemyHit();
         for (int i = -2; i <= 2; i++)
         {
-            Vector3 dropPos = new Vector3(playerTransform.position.x + i * 2.0f, transform.position.y + 6.0f, 0f);
+            Vector3 dropPos = new Vector3(playerTransform.position.x + i * 2.0f, transform.position.y + 5.5f, 0f);
             SpawnThornProjectile(dropPos, Vector2.down, 6.5f);
         }
     }
 
     private void SpawnThornProjectile(Vector3 pos, Vector2 dir, float spd)
     {
-        GameObject proj = new GameObject("AstillaCorrupta");
+        GameObject proj = new GameObject("AstillaMadera");
         proj.tag = "Hazard";
         proj.transform.position = pos;
-        proj.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+        proj.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
 
         SpriteRenderer pSr = proj.AddComponent<SpriteRenderer>();
-        pSr.sprite = projectileSprite != null ? projectileSprite : sr.sprite;
-        pSr.color = new Color(0.2f, 0.9f, 0.3f, 0.95f); // Verde espora brillante
+        pSr.sprite = thornSprite != null ? thornSprite : projectileSprite;
+        pSr.color = Color.white;
         pSr.sortingOrder = 5;
+
+        // Rotar hacia la dirección de vuelo
+        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        proj.transform.rotation = Quaternion.Euler(0, 0, angle);
 
         CircleCollider2D cc = proj.AddComponent<CircleCollider2D>();
         cc.isTrigger = true;
@@ -213,14 +225,13 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         proj.AddComponent<BossProjectile>().Setup(dir, spd);
     }
 
-    // Fase de Furia: Pisotón sísmico que crea ondas de choque a izquierda y derecha
+    // Fase de Furia: Terremoto y Ondas de Choque (utiliza EarthquakeShockwave.png)
     private IEnumerator EarthquakeSlamAttack()
     {
         isAttacking = true;
         KiwiAudio.PlayBossRoar();
         CameraFollow2D.Shake(0.4f, 0.45f);
 
-        // Salto y pisotón contra el suelo
         Vector3 startP = transform.position;
         float elapsed = 0f;
         while (elapsed < 0.3f)
@@ -231,9 +242,9 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         }
         transform.position = startP;
 
-        // Ondas de choque en el suelo
-        SpawnShockwave(transform.position + Vector3.down * 1.0f, Vector2.left);
-        SpawnShockwave(transform.position + Vector3.down * 1.0f, Vector2.right);
+        // Ondas de choque en el suelo con sprite propio
+        SpawnShockwave(transform.position + Vector3.down * 1.2f, Vector2.left);
+        SpawnShockwave(transform.position + Vector3.down * 1.2f, Vector2.right);
 
         yield return new WaitForSeconds(0.6f);
         isAttacking = false;
@@ -241,15 +252,16 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
 
     private void SpawnShockwave(Vector3 pos, Vector2 dir)
     {
-        GameObject wave = new GameObject("OndaChoque");
+        GameObject wave = new GameObject("OndaChoqueTierra");
         wave.tag = "Hazard";
         wave.transform.position = pos;
-        wave.transform.localScale = new Vector3(1.4f, 0.8f, 1f);
+        wave.transform.localScale = new Vector3(1.4f, 1.2f, 1f);
 
         SpriteRenderer wSr = wave.AddComponent<SpriteRenderer>();
-        wSr.sprite = sr.sprite;
-        wSr.color = new Color(0.55f, 0.35f, 0.15f, 0.9f);
+        wSr.sprite = shockwaveSprite != null ? shockwaveSprite : thornSprite;
+        wSr.color = Color.white;
         wSr.sortingOrder = 4;
+        if (dir.x < 0) wSr.flipX = true;
 
         BoxCollider2D bc = wave.AddComponent<BoxCollider2D>();
         bc.isTrigger = true;
@@ -279,7 +291,6 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         currentHealth -= finalDmg;
         KiwiAudio.PlayEnemyHit();
 
-        // Comprobar Fase de Furia (<50% vida)
         if (!isRaging && currentHealth <= maxHealth / 2)
         {
             isRaging = true;
@@ -353,7 +364,7 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
     {
         float timer = 0f;
         float duration = 2.2f;
-        Color pureNatureColor = new Color(0.2f, 1f, 0.4f, 0.6f); // Esmeralda radiante del bosque purificado
+        Color pureNatureColor = new Color(0.2f, 1f, 0.4f, 0.6f);
 
         if (rewardSeedSprite != null)
         {
@@ -392,14 +403,12 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         float dist = Vector2.Distance(transform.position, playerTransform.position);
         if (dist > 18f) return;
 
-        // Barra de Vida Épica del Jefe en la parte superior
         float screenW = Screen.width;
         float barWidth = Mathf.Min(420f, screenW * 0.65f);
         float barHeight = 20f;
         float barX = (screenW - barWidth) / 2f;
         float barY = 30f;
 
-        // Título del Jefe
         GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
         titleStyle.alignment = TextAnchor.MiddleCenter;
         titleStyle.fontSize = 15;
@@ -408,42 +417,19 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         string bossTitle = isRaging ? "⚠ EL GUARDIÁN PÚTRIDO - [FURIA DESATADA] ⚠" : "EL GUARDIÁN PÚTRIDO (ESPÍRITU DEL BOSQUE)";
         GUI.Label(new Rect(barX - 80, barY - 26, barWidth + 160, 24), bossTitle, titleStyle);
 
-        // Marco y Fondo
         GUI.Box(new Rect(barX - 3, barY - 3, barWidth + 6, barHeight + 6), GUIContent.none);
 
-        // Barra de relleno con gradiente dinámico
         float healthPct = Mathf.Clamp01((float)currentHealth / maxHealth);
         Color prevColor = GUI.color;
         GUI.color = isRaging ? Color.Lerp(Color.red, Color.yellow, healthPct) : Color.Lerp(Color.red, new Color(0.2f, 0.95f, 0.35f), healthPct);
         GUI.DrawTexture(new Rect(barX, barY, barWidth * healthPct, barHeight), Texture2D.whiteTexture);
         GUI.color = prevColor;
 
-        // Texto numérico de salud
         GUIStyle hpStyle = new GUIStyle(GUI.skin.label);
         hpStyle.alignment = TextAnchor.MiddleCenter;
         hpStyle.fontSize = 12;
         hpStyle.fontStyle = FontStyle.Bold;
         hpStyle.normal.textColor = Color.white;
         GUI.Label(new Rect(barX, barY - 1, barWidth, barHeight), $"{currentHealth} / {maxHealth}", hpStyle);
-    }
-}
-
-/// <summary>
-/// Peligro temporal de raíz punzante que desaparece tras un breve tiempo.
-/// </summary>
-public class SpikeHazard : MonoBehaviour
-{
-    public void Setup(float duration)
-    {
-        Destroy(gameObject, duration);
-    }
-
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-        if (collision.CompareTag("Player"))
-        {
-            PlayerHealth health = collision.GetComponent<PlayerHealth>();
-            if (health != null) health.TakeDamage(1, transform.position);
-        }
     }
 }
