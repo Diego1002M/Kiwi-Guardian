@@ -90,6 +90,13 @@ public static class KiwiAudio
         Play(victoryClip);
     }
 
+    private static AudioClip deathClip;
+    public static void PlayPlayerDeath()
+    {
+        if (deathClip == null) deathClip = CreateArpeggio(new float[] { 440f, 370f, 293f, 220f, 146f }, 0.14f, 0.65f);
+        Play(deathClip);
+    }
+
     private static void Play(AudioClip clip)
     {
         EnsureAudioSource();
