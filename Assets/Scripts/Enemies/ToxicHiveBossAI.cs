@@ -3,28 +3,33 @@ using UnityEngine;
 using Platformer2D;
 
 /// <summary>
-/// Jefe Regional del Desierto de Residuos: La Colmena Tóxica (Espíritu de Fuego Corrompido).
-/// Caldera mecánica viviente que escupe fuego, incendia el suelo e invoca mini-slimes.
-/// DEBILIDAD CRÍTICA AL AGUA: Las dagas de agua le hacen daño doble (2x).
+/// Jefe Regional del Desierto de Residuos: El Superenjambre de la Génesis Tóxica (Espíritu de Fuego/Tierra Corrompido).
+/// Masa palpitante de biomatriz tóxica, parásitos y pústulas ácidas.
+/// Combate en 2 fases con andanadas ácidas, estallidos radiales de bilis y metamorfosis furiosa.
+/// DEBILIDAD CRÍTICA AL AGUA: Las dagas de agua [3 / E] neutralizan el ácido y causan daño doble (2x).
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
 {
-    [Header("Estadísticas")]
-    [SerializeField] private int maxHealth = 28;
+    [Header("Estadísticas del Jefe")]
+    [SerializeField] private int maxHealth = 30;
     [SerializeField] private float moveSpeed = 2.4f;
-    [SerializeField] private float arenaMinX = 35f;
-    [SerializeField] private float arenaMaxX = 47f;
+    [SerializeField] private float rageMoveSpeed = 4.0f;
+    [SerializeField] private float arenaMinX = 51f;
+    [SerializeField] private float arenaMaxX = 65f;
 
     [Header("Ataques")]
     [SerializeField] private float attackInterval = 3.2f;
+    [SerializeField] private float rageAttackInterval = 1.8f;
     [SerializeField] private Sprite fireballSprite;
     [SerializeField] private Sprite rewardSeedSprite;
 
     private int currentHealth;
     private bool isRaging = false;
     private bool isDead = false;
+    private bool isAttacking = false;
     private float nextAttackTime = 0f;
+    private float nextDelugeTime = 0f;
     private int moveDir = 1;
 
     private Transform playerTransform;
@@ -32,6 +37,7 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
     private Rigidbody2D rb;
     private Collider2D col;
     private Color originalColor;
+    private Vector3 baseScale;
 
     public static ToxicHiveBossAI ActiveBoss { get; private set; }
     public int CurrentHealth => currentHealth;
@@ -54,6 +60,7 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
         if (sr != null) originalColor = sr.color;
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<Collider2D>();
+        baseScale = transform.localScale;
 
         rb.bodyType = RigidbodyType2D.Kinematic;
         rb.useFullKinematicContacts = true;
@@ -66,7 +73,8 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
     private void Start()
     {
         FindPlayer();
-        nextAttackTime = Time.time + 2f;
+        nextAttackTime = Time.time + 2.0f;
+        nextDelugeTime = Time.time + 5.0f;
     }
 
     private void FindPlayer()
@@ -88,142 +96,212 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
         float dist = Vector2.Distance(transform.position, playerTransform.position);
         if (dist > 18f) return;
 
-        // 1. Patrulla flotante/balanceante de la caldera
-        transform.Translate(Vector3.right * moveDir * moveSpeed * Time.deltaTime, Space.World);
+        // 1. Pulsación orgánica palpitante de la colmena
+        float pulseSpeed = isRaging ? 6.5f : 3.0f;
+        float pulseAmount = isRaging ? 0.08f : 0.04f;
+        float scaleMod = 1f + Mathf.Sin(Time.time * pulseSpeed) * pulseAmount;
+        transform.localScale = new Vector3(baseScale.x * scaleMod, baseScale.y * (2f - scaleMod), baseScale.z);
 
-        if (transform.position.x <= arenaMinX)
+        // 2. Desplazamiento reptante por la arena
+        if (!isAttacking)
         {
-            moveDir = 1;
-            if (sr != null) sr.flipX = false;
-        }
-        else if (transform.position.x >= arenaMaxX)
-        {
-            moveDir = -1;
-            if (sr != null) sr.flipX = true;
+            float speed = isRaging ? rageMoveSpeed : moveSpeed;
+            transform.Translate(Vector3.right * moveDir * speed * Time.deltaTime, Space.World);
+
+            if (transform.position.x <= arenaMinX)
+            {
+                moveDir = 1;
+                if (sr != null) sr.flipX = false;
+            }
+            else if (transform.position.x >= arenaMaxX)
+            {
+                moveDir = -1;
+                if (sr != null) sr.flipX = true;
+            }
         }
 
-        // 2. Patrones de Ataque
-        if (Time.time >= nextAttackTime)
+        // 3. Patrones de Ataque
+        float currentInterval = isRaging ? rageAttackInterval : attackInterval;
+        if (Time.time >= nextAttackTime && !isAttacking)
         {
-            ExecuteRandomAttack();
-            nextAttackTime = Time.time + (isRaging ? attackInterval * 0.6f : attackInterval);
+            int atk = Random.Range(0, 3);
+            if (atk == 0) StartCoroutine(AcidSludgeBarrage());
+            else if (atk == 1) RadialPustuleBurst();
+            else SpawnSwarmMinion();
+
+            nextAttackTime = Time.time + currentInterval;
+        }
+
+        // 4. Fase de Furia: Diluvio de lluvia ácida
+        if (isRaging && Time.time >= nextDelugeTime && !isAttacking)
+        {
+            StartCoroutine(AcidRainDeluge());
+            nextDelugeTime = Time.time + 5.5f;
         }
     }
 
-    private void ExecuteRandomAttack()
+    // Ataque 1: Andanada de Flemas Ácidas en parábola
+    private IEnumerator AcidSludgeBarrage()
     {
-        int atk = Random.Range(0, 3);
-        if (atk == 0)
-        {
-            // Ataque 1: Morteros de Fuego en arco
-            StartCoroutine(MortarAttack());
-        }
-        else if (atk == 1)
-        {
-            // Ataque 2: Disparo de fuego al suelo (obliga a saltar o apagar)
-            ShootGroundFlame();
-        }
-        else
-        {
-            // Ataque 3: Estampida sísmica
-            StartCoroutine(SlamAttack());
-        }
-    }
-
-    private IEnumerator MortarAttack()
-    {
+        isAttacking = true;
         KiwiAudio.PlayBossRoar();
-        CameraFollow2D.Shake(0.25f, 0.25f);
+        CameraFollow2D.Shake(0.2f, 0.2f);
 
-        for (int i = 0; i < (isRaging ? 3 : 2); i++)
+        int count = isRaging ? 3 : 2;
+        for (int i = 0; i < count; i++)
         {
             if (playerTransform == null) break;
 
-            GameObject fireball = new GameObject("MorteroFuego");
-            fireball.tag = "Hazard";
-            fireball.transform.position = transform.position + Vector3.up * 1.2f;
-            fireball.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
+            Vector3 spawnPos = transform.position + Vector3.up * 1.5f;
+            Vector2 target = (Vector2)playerTransform.position + new Vector2((i - 0.5f) * 2.2f, 0f);
+            Vector2 launchVel = CalculateParabolicVelocity(spawnPos, target, 0.95f);
 
-            SpriteRenderer fSr = fireball.AddComponent<SpriteRenderer>();
-            fSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
-            fSr.color = new Color(1f, 0.4f, 0.1f);
+            GameObject glob = new GameObject("FlemaAcida");
+            glob.tag = "Hazard";
+            glob.transform.position = spawnPos;
+            glob.transform.localScale = new Vector3(0.85f, 0.85f, 1f);
 
-            CircleCollider2D c = fireball.AddComponent<CircleCollider2D>();
-            c.isTrigger = true;
-            c.radius = 0.4f;
+            SpriteRenderer gSr = glob.AddComponent<SpriteRenderer>();
+            gSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
+            gSr.color = new Color(0.3f, 1f, 0.2f, 0.95f); // Verde radioactivo
+            gSr.sortingOrder = 5;
 
-            Rigidbody2D projRb = fireball.AddComponent<Rigidbody2D>();
-            projRb.bodyType = RigidbodyType2D.Kinematic;
-            projRb.useFullKinematicContacts = true;
+            CircleCollider2D cc = glob.AddComponent<CircleCollider2D>();
+            cc.isTrigger = true;
+            cc.radius = 0.35f;
 
-            Vector2 targetPos = playerTransform.position + new Vector3(Random.Range(-1.5f, 1.5f), 0, 0);
-            Vector2 launchDir = (targetPos - (Vector2)fireball.transform.position).normalized;
+            Rigidbody2D gRb = glob.AddComponent<Rigidbody2D>();
+            gRb.gravityScale = 1.5f;
+            gRb.linearVelocity = launchVel;
 
-            fireball.AddComponent<BossProjectile>().Setup(launchDir, 8.5f);
-            yield return new WaitForSeconds(0.25f);
+            glob.AddComponent<AcidGlobImpact>();
+
+            yield return new WaitForSeconds(0.3f);
+        }
+
+        isAttacking = false;
+    }
+
+    private Vector2 CalculateParabolicVelocity(Vector2 origin, Vector2 target, float timeToTarget)
+    {
+        float vx = (target.x - origin.x) / timeToTarget;
+        float vy = (target.y - origin.y) / timeToTarget + 0.5f * Mathf.Abs(Physics2D.gravity.y * 1.5f) * timeToTarget;
+        return new Vector2(vx, vy);
+    }
+
+    // Ataque 2: Estallido Radial de Pústulas (8 proyectiles en estrella)
+    private void RadialPustuleBurst()
+    {
+        KiwiAudio.PlayFlyPop();
+        CameraFollow2D.Shake(0.25f, 0.25f);
+
+        int numProj = 8;
+        for (int i = 0; i < numProj; i++)
+        {
+            float angle = i * (360f / numProj);
+            Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+
+            GameObject needle = new GameObject("PustulaEspora");
+            needle.tag = "Hazard";
+            needle.transform.position = transform.position + (Vector3)dir * 1.0f;
+            needle.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
+
+            SpriteRenderer nSr = needle.AddComponent<SpriteRenderer>();
+            nSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
+            nSr.color = new Color(0.8f, 0.9f, 0.1f, 0.95f); // Amarillo bilis
+            nSr.sortingOrder = 5;
+
+            CircleCollider2D cc = needle.AddComponent<CircleCollider2D>();
+            cc.isTrigger = true;
+            cc.radius = 0.25f;
+
+            needle.AddComponent<BossProjectile>().Setup(dir, 7.5f);
         }
     }
 
-    private void ShootGroundFlame()
+    // Ataque 3: Invocación de Larva del Enjambre
+    private void SpawnSwarmMinion()
     {
-        // Dispara fuego que se clava en el suelo
         KiwiAudio.PlayEnemyHit();
-        Vector3 dropPos = new Vector3(playerTransform.position.x, transform.position.y - 1.5f, 0f);
 
-        GameObject fire = new GameObject("LlamaSuelo");
-        fire.transform.position = dropPos;
-        fire.transform.localScale = new Vector3(1.2f, 1.8f, 1f);
+        GameObject larva = new GameObject("LarvaEnjambre");
+        larva.tag = "Hazard";
+        larva.transform.position = transform.position + new Vector3(moveDir * 1.5f, 0.3f, 0f);
+        larva.transform.localScale = new Vector3(0.65f, 0.65f, 1f);
 
-        SpriteRenderer fSr = fire.AddComponent<SpriteRenderer>();
-        fSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
-        fSr.color = new Color(1f, 0.35f, 0.1f);
+        SpriteRenderer lSr = larva.AddComponent<SpriteRenderer>();
+        lSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
+        lSr.color = new Color(0.9f, 0.85f, 0.7f, 1f); // Tono larva beige
+        lSr.sortingOrder = 4;
 
-        BoxCollider2D bc = fire.AddComponent<BoxCollider2D>();
-        bc.isTrigger = true;
-        bc.size = new Vector2(1f, 1.5f);
+        CircleCollider2D cc = larva.AddComponent<CircleCollider2D>();
+        cc.isTrigger = true;
+        cc.radius = 0.3f;
 
-        // Se apaga al lanzarle agua
-        fire.AddComponent<FireBarrier>();
-        Destroy(fire, 6f); // Se disuelve a los 6 segundos si no se apaga antes
+        Vector2 crawlDir = (playerTransform != null && playerTransform.position.x > transform.position.x) ? Vector2.right : Vector2.left;
+        larva.AddComponent<BossProjectile>().Setup(crawlDir, 5.0f);
     }
 
-    private IEnumerator SlamAttack()
+    // Fase de Furia: Diluvio de Lluvia Ácida desde las alturas
+    private IEnumerator AcidRainDeluge()
     {
-        // Estampida hacia abajo y temblor
-        Vector3 startPos = transform.position;
-        transform.position += Vector3.up * 1.5f;
-        yield return new WaitForSeconds(0.3f);
-
-        transform.position = startPos;
-        CameraFollow2D.Shake(0.45f, 0.35f);
+        isAttacking = true;
         KiwiAudio.PlayBossRoar();
+        CameraFollow2D.Shake(0.35f, 0.4f);
+
+        for (int i = -3; i <= 3; i++)
+        {
+            Vector3 dropPos = new Vector3(playerTransform.position.x + i * 1.8f, transform.position.y + 6.5f, 0f);
+            
+            GameObject drop = new GameObject("GotaAcida");
+            drop.tag = "Hazard";
+            drop.transform.position = dropPos;
+            drop.transform.localScale = new Vector3(0.55f, 0.8f, 1f);
+
+            SpriteRenderer dSr = drop.AddComponent<SpriteRenderer>();
+            dSr.sprite = fireballSprite != null ? fireballSprite : sr.sprite;
+            dSr.color = new Color(0.4f, 1f, 0.15f, 0.95f);
+            dSr.sortingOrder = 5;
+
+            CircleCollider2D cc = drop.AddComponent<CircleCollider2D>();
+            cc.isTrigger = true;
+            cc.radius = 0.25f;
+
+            drop.AddComponent<BossProjectile>().Setup(Vector2.down, 8.5f);
+            yield return new WaitForSeconds(0.12f);
+        }
+
+        isAttacking = false;
     }
 
     public void ApplyElementalHit(ElementType element, int damage, Vector2 hitDirection)
     {
         if (isDead) return;
 
-        int finalDamage = damage;
-        // 🌊 ¡DEBILIDAD AL AGUA!
+        int finalDmg = damage;
+
+        // 💧 ¡DEBILIDAD AL AGUA!
         if (element == ElementType.Agua)
         {
-            finalDamage *= 2;
-            KiwiAudio.PlayFlyPop(); // Vapor
-            Debug.Log($"🌊 ¡AGUA CRÍTICA contra La Colmena Tóxica! ({finalDamage} de daño)");
+            finalDmg *= 2;
+            StartCoroutine(WaterFlash());
+            KiwiAudio.PlayFlyPop();
+        }
+        else
+        {
+            StartCoroutine(HurtFlash());
         }
 
-        currentHealth -= finalDamage;
+        currentHealth -= finalDmg;
         KiwiAudio.PlayEnemyHit();
 
-        if (currentHealth <= maxHealth / 2 && !isRaging)
+        // Metamorfosis Furiosa (<50% vida)
+        if (!isRaging && currentHealth <= maxHealth / 2)
         {
             isRaging = true;
             KiwiAudio.PlayBossRoar();
-            CameraFollow2D.Shake(0.4f, 0.4f);
-            if (sr != null) sr.color = new Color(1f, 0.2f, 0.2f); // Rojo incandescente
+            CameraFollow2D.Shake(0.5f, 0.5f);
         }
-
-        StartCoroutine(HurtFlash());
 
         if (currentHealth <= 0)
         {
@@ -236,11 +314,18 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
         ApplyElementalHit(ElementType.Agua, damageAmount, hitDirection);
     }
 
+    private IEnumerator WaterFlash()
+    {
+        if (sr != null) sr.color = new Color(0.2f, 0.9f, 1f); // Enfriamiento/dilución acuosa
+        yield return new WaitForSeconds(0.18f);
+        if (sr != null && !isDead) sr.color = isRaging ? new Color(1f, 0.3f, 0.3f) : originalColor;
+    }
+
     private IEnumerator HurtFlash()
     {
         if (sr != null) sr.color = Color.white;
         yield return new WaitForSeconds(0.12f);
-        if (sr != null && !isDead) sr.color = isRaging ? new Color(1f, 0.2f, 0.2f) : originalColor;
+        if (sr != null && !isDead) sr.color = isRaging ? new Color(1f, 0.3f, 0.3f) : originalColor;
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -258,7 +343,7 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
         if (collision.CompareTag("Player"))
         {
             KiwiController kiwi = collision.GetComponent<KiwiController>();
-            if (kiwi != null && collision.transform.position.y > transform.position.y + 0.8f)
+            if (kiwi != null && collision.transform.position.y > transform.position.y + 1.0f)
             {
                 kiwi.StompBounce(16f);
                 TakeDamage(1, Vector2.up);
@@ -277,8 +362,6 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
 
         KiwiAudio.PlayVictory();
         CameraFollow2D.Shake(0.5f, 0.6f);
-
-        // Secuencia de purificación del fuego
         StartCoroutine(PurifySequence());
     }
 
@@ -286,13 +369,13 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
     {
         float timer = 0f;
         float duration = 2.2f;
-        Color pureFlameColor = new Color(1f, 0.85f, 0.3f, 0.6f); // Fuego solar purificado
+        Color pureAmberColor = new Color(1f, 0.85f, 0.25f, 0.6f); // Cristal ámbar purificado de la tierra
 
         if (rewardSeedSprite != null)
         {
             for (int i = 0; i < 4; i++)
             {
-                GameObject seed = new GameObject("Semilla Fuego");
+                GameObject seed = new GameObject("Semilla Tierra");
                 seed.transform.position = transform.position + new Vector3((i - 1.5f) * 1.3f, 1.2f, 0);
                 seed.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
 
@@ -311,11 +394,84 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
         {
             timer += Time.deltaTime;
             float t = timer / duration;
-            if (sr != null) sr.color = Color.Lerp(originalColor, pureFlameColor, t);
+            if (sr != null) sr.color = Color.Lerp(originalColor, pureAmberColor, t);
             transform.position += Vector3.up * 1.2f * Time.deltaTime;
             yield return null;
         }
 
+        Destroy(gameObject);
+    }
+
+    private void OnGUI()
+    {
+        if (isDead || playerTransform == null) return;
+        float dist = Vector2.Distance(transform.position, playerTransform.position);
+        if (dist > 18f) return;
+
+        // Barra de Vida Épica del Jefe en la parte superior
+        float screenW = Screen.width;
+        float barWidth = Mathf.Min(420f, screenW * 0.65f);
+        float barHeight = 20f;
+        float barX = (screenW - barWidth) / 2f;
+        float barY = 30f;
+
+        // Título del Jefe
+        GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
+        titleStyle.alignment = TextAnchor.MiddleCenter;
+        titleStyle.fontSize = 15;
+        titleStyle.fontStyle = FontStyle.Bold;
+        titleStyle.normal.textColor = isRaging ? new Color(1f, 0.3f, 0.8f) : new Color(0.6f, 1f, 0.2f);
+        string bossTitle = isRaging ? "⚠ SUPERENJAMBRE TÓXICO - [METAMORFOSIS FURIOSA] ⚠" : "EL SUPERENJAMBRE DE LA GÉNESIS TÓXICA (ESPÍRITU DE LA TIERRA)";
+        GUI.Label(new Rect(barX - 80, barY - 26, barWidth + 160, 24), bossTitle, titleStyle);
+
+        // Marco y Fondo
+        GUI.Box(new Rect(barX - 3, barY - 3, barWidth + 6, barHeight + 6), GUIContent.none);
+
+        // Barra de relleno con gradiente dinámico
+        float healthPct = Mathf.Clamp01((float)currentHealth / maxHealth);
+        Color prevColor = GUI.color;
+        GUI.color = isRaging ? Color.Lerp(new Color(0.9f, 0.1f, 0.5f), Color.yellow, healthPct) : Color.Lerp(Color.red, new Color(0.4f, 1f, 0.2f), healthPct);
+        GUI.DrawTexture(new Rect(barX, barY, barWidth * healthPct, barHeight), Texture2D.whiteTexture);
+        GUI.color = prevColor;
+
+        // Texto numérico de salud
+        GUIStyle hpStyle = new GUIStyle(GUI.skin.label);
+        hpStyle.alignment = TextAnchor.MiddleCenter;
+        hpStyle.fontSize = 12;
+        hpStyle.fontStyle = FontStyle.Bold;
+        hpStyle.normal.textColor = Color.white;
+        GUI.Label(new Rect(barX, barY - 1, barWidth, barHeight), $"{currentHealth} / {maxHealth}", hpStyle);
+    }
+}
+
+/// <summary>
+/// Flema ácida que detona al impactar contra el suelo o el jugador.
+/// </summary>
+public class AcidGlobImpact : MonoBehaviour
+{
+    private void Start()
+    {
+        Destroy(gameObject, 4.0f);
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Player"))
+        {
+            PlayerHealth health = collision.GetComponent<PlayerHealth>();
+            if (health != null) health.TakeDamage(1, transform.position);
+            Explode();
+        }
+        else if (collision.gameObject.layer == LayerMask.NameToLayer("Ground"))
+        {
+            Explode();
+        }
+    }
+
+    private void Explode()
+    {
+        KiwiAudio.PlayFlyPop();
+        CameraFollow2D.Shake(0.12f, 0.15f);
         Destroy(gameObject);
     }
 }

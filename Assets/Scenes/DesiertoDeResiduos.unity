@@ -3137,7 +3137,7 @@ GameObject:
   - component: {fileID: 1947285797}
   - component: {fileID: 1947285796}
   m_Layer: 8
-  m_Name: "Colmena T\xF3xica (Jefe de Fuego)"
+  m_Name: "El Superenjambre de la G\xE9nesis T\xF3xica (Jefe de la Tierra)"
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3152,8 +3152,8 @@ Transform:
   m_GameObject: {fileID: 1947285794}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 58, y: 2, z: 0}
-  m_LocalScale: {x: 2.5, y: 2.5, z: 1}
+  m_LocalPosition: {x: 58, y: 2.0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1442086031}
@@ -3170,11 +3170,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 560066d6a9bd28b49ad12681dbf60ded, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ToxicHiveBossAI
-  maxHealth: 28
+  maxHealth: 30
   moveSpeed: 2.4
+  rageMoveSpeed: 4.0
   arenaMinX: 51
   arenaMaxX: 65
   attackInterval: 3.2
+  rageAttackInterval: 1.8
   fireballSprite: {fileID: 21300000, guid: 5063ac1e7cd652e49baa23d00293a2f1, type: 3}
   rewardSeedSprite: {fileID: 21300000, guid: d90a1fcc6f964b03b0b4c93b04f09889, type: 3}
 --- !u!50 &1947285797
@@ -3239,7 +3241,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.9
+  m_Radius: 2.8
 --- !u!212 &1947285799
 SpriteRenderer:
   serializedVersion: 3
