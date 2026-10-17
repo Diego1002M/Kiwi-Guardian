@@ -344,6 +344,47 @@ public class PlasticWhaleBossAI : MonoBehaviour, IDamageable
         Destroy(gameObject);
     }
 
+    private void OnGUI()
+    {
+        if (isDead || playerTransform == null) return;
+        float dist = Vector2.Distance(transform.position, playerTransform.position);
+        if (dist > 18f) return;
+
+        // Barra de Vida Épica del Jefe en la parte superior
+        float screenW = Screen.width;
+        float barWidth = Mathf.Min(420f, screenW * 0.65f);
+        float barHeight = 20f;
+        float barX = (screenW - barWidth) / 2f;
+        float barY = 30f;
+
+        // Título del Jefe con cambio de color en Fase de Furia
+        GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
+        titleStyle.alignment = TextAnchor.MiddleCenter;
+        titleStyle.fontSize = 15;
+        titleStyle.fontStyle = FontStyle.Bold;
+        titleStyle.normal.textColor = isRaging ? new Color(1f, 0.35f, 0.35f) : new Color(0.35f, 0.9f, 1f);
+        string bossTitle = isRaging ? "⚠ LEVIATÁN DE PLÁSTICO - [FURIA DESATADA] ⚠" : "LEVIATÁN DE PLÁSTICO (ESPÍRITU DEL OCÉANO)";
+        GUI.Label(new Rect(barX - 80, barY - 26, barWidth + 160, 24), bossTitle, titleStyle);
+
+        // Marco y Fondo
+        GUI.Box(new Rect(barX - 3, barY - 3, barWidth + 6, barHeight + 6), GUIContent.none);
+
+        // Barra de relleno con gradiente dinámico
+        float healthPct = Mathf.Clamp01((float)currentHealth / maxHealth);
+        Color prevColor = GUI.color;
+        GUI.color = isRaging ? Color.Lerp(Color.red, Color.yellow, healthPct) : Color.Lerp(Color.red, new Color(0.1f, 0.85f, 1f), healthPct);
+        GUI.DrawTexture(new Rect(barX, barY, barWidth * healthPct, barHeight), Texture2D.whiteTexture);
+        GUI.color = prevColor;
+
+        // Texto numérico de salud
+        GUIStyle hpStyle = new GUIStyle(GUI.skin.label);
+        hpStyle.alignment = TextAnchor.MiddleCenter;
+        hpStyle.fontSize = 12;
+        hpStyle.fontStyle = FontStyle.Bold;
+        hpStyle.normal.textColor = Color.white;
+        GUI.Label(new Rect(barX, barY - 1, barWidth, barHeight), $"{currentHealth} / {maxHealth}", hpStyle);
+    }
+
     public void Setup(Sprite projSprite, Sprite seedSprite)
     {
         projectileSprite = projSprite;
