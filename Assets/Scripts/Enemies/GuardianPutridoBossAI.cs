@@ -436,3 +436,20 @@ public class GuardianPutridoBossAI : MonoBehaviour, IDamageable, IElementalTarge
         GUI.Label(new Rect(barX, barY - 1, barWidth, barHeight), $"{currentHealth} / {maxHealth}", hpStyle);
     }
 }
+
+public class SpikeHazard : MonoBehaviour
+{
+    public void Setup(float lifetime)
+    {
+        Destroy(gameObject, lifetime);
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Player"))
+        {
+            Platformer2D.PlayerHealth health = collision.GetComponent<Platformer2D.PlayerHealth>();
+            if (health != null) health.TakeDamage(1, transform.position);
+        }
+    }
+}

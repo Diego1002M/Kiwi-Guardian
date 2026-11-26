@@ -443,3 +443,42 @@ public class CombustionColossusBossAI : MonoBehaviour, IDamageable, IElementalTa
         GUI.Label(new Rect(barX, barY - 1, barWidth, barHeight), $"{currentHealth} / {maxHealth}", hpStyle);
     }
 }
+
+public class SmogBombExplosion : MonoBehaviour
+{
+    private void Start()
+    {
+        Destroy(gameObject, 3.5f);
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Player"))
+        {
+            Platformer2D.PlayerHealth health = collision.GetComponent<Platformer2D.PlayerHealth>();
+            if (health != null) health.TakeDamage(1, transform.position);
+            Explode();
+        }
+        else if (collision.gameObject.layer == LayerMask.NameToLayer("Ground") || collision.CompareTag("Ground"))
+        {
+            Explode();
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            Platformer2D.PlayerHealth health = collision.gameObject.GetComponent<Platformer2D.PlayerHealth>();
+            if (health != null) health.TakeDamage(1, transform.position);
+        }
+        Explode();
+    }
+
+    private void Explode()
+    {
+        KiwiAudio.PlayFlyPop();
+        CameraFollow2D.Shake(0.2f, 0.25f);
+        Destroy(gameObject);
+    }
+}

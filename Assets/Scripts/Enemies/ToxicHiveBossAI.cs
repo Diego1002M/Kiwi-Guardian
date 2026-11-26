@@ -70,9 +70,9 @@ public class ToxicHiveBossAI : MonoBehaviour, IDamageable, IElementalTarget
 
         currentHealth = maxHealth;
         ActiveBoss = this;
-        acidSprite = Resources.Load<Sprite>("Sprites/AcidGlob".Replace(""", ""));
-        pustuleSprite = Resources.Load<Sprite>("Sprites/ThornProjectile".Replace(""", ""));
-        if (rewardSeedSprite == null) rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed".Replace(""", ""));
+        acidSprite = Resources.Load<Sprite>("Sprites/AcidGlob");
+        pustuleSprite = Resources.Load<Sprite>("Sprites/ThornProjectile");
+        if (rewardSeedSprite == null) rewardSeedSprite = Resources.Load<Sprite>("Sprites/EnergySeed");
     }
 
     private void Start()
