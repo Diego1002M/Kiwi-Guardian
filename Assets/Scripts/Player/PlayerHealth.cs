@@ -18,6 +18,9 @@ namespace Platformer2D
         [Header("Knockback al recibir daño")]
         [SerializeField] private float damageKnockbackForce = 7f;
 
+        [Header("Límite de Caída al Vacío")]
+        [SerializeField] private float fallDeathThresholdY = -7.0f;
+
         [Header("Referencias Visuales")]
         [SerializeField] private SpriteRenderer spriteRenderer;
 
@@ -69,6 +72,13 @@ namespace Platformer2D
                 {
                     ReturnToMainMenu();
                 }
+                return;
+            }
+
+            // Detectar caída al vacío/abismo
+            if (transform.position.y < fallDeathThresholdY)
+            {
+                Die();
                 return;
             }
 
@@ -180,6 +190,7 @@ namespace Platformer2D
             {
                 rb.linearVelocity = Vector2.zero;
                 rb.gravityScale = 0f;
+                rb.simulated = false;
             }
 
             if (controller != null) controller.enabled = false;
