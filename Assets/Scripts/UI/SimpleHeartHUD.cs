@@ -161,8 +161,8 @@ public class SimpleHeartHUD : MonoBehaviour
         }
 
         // 6. PANEL DE OBJETIVOS Y PROGRESIÓN (ESQUINA SUPERIOR DERECHA)
-        float objW = 230;
-        float objH = 68;
+        float objW = 255;
+        float objH = 72;
         float objX = Screen.width - objW - 15;
         float objY = 12;
 

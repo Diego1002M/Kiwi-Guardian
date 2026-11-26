@@ -149,14 +149,23 @@ public class KiwiController : MonoBehaviour
             runDustTimer -= Time.deltaTime;
             if (runDustTimer <= 0f)
             {
-                runDustTimer = 0.15f;
-                KiwiVisualJuice.SpawnRunDust(transform.position + Vector3.down * 0.45f, isFacingRight);
+                runDustTimer = 0.10f; // Frecuencia rítmica al compás del trote
+                KiwiVisualJuice.SpawnRunDust(GetFeetPosition(), isFacingRight);
             }
         }
         else
         {
-            runDustTimer = 0.05f;
+            runDustTimer = 0.03f;
         }
+    }
+
+    public Vector3 GetFeetPosition()
+    {
+        if (mainCollider != null)
+        {
+            return new Vector3(mainCollider.bounds.center.x, mainCollider.bounds.min.y + 0.04f, transform.position.z);
+        }
+        return transform.position + Vector3.down * 0.72f;
     }
 
     private void FixedUpdate()
@@ -174,7 +183,7 @@ public class KiwiController : MonoBehaviour
         jumpBufferCounter = 0f;
         canDoubleJump = true;
 
-        KiwiVisualJuice.SpawnJumpDust(transform.position + Vector3.down * 0.45f, Color.white);
+        KiwiVisualJuice.SpawnJumpDust(GetFeetPosition(), Color.white);
         visualEffects?.OnJump();
         KiwiAudio.PlayJump();
     }
@@ -186,7 +195,7 @@ public class KiwiController : MonoBehaviour
         canDoubleJump = false;
         jumpBufferCounter = 0f;
 
-        KiwiVisualJuice.SpawnJumpDust(transform.position + Vector3.down * 0.45f, new Color(0.2f, 0.85f, 1f));
+        KiwiVisualJuice.SpawnJumpDust(GetFeetPosition(), new Color(0.2f, 0.85f, 1f));
         visualEffects?.OnDoubleJump();
         KiwiAudio.PlayDoubleJump();
         SpawnDoubleJumpEffect();
@@ -322,7 +331,7 @@ public class KiwiController : MonoBehaviour
         // Si acaba de tocar tierra tras una caída
         if (!wasGroundedBefore && isGrounded && rb != null && rb.linearVelocity.y <= 0.1f)
         {
-            KiwiVisualJuice.SpawnLandDust(transform.position + Vector3.down * 0.45f);
+            KiwiVisualJuice.SpawnLandDust(GetFeetPosition());
         }
     }
 
