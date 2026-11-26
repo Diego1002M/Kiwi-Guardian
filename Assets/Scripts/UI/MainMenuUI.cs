@@ -273,7 +273,7 @@ public class MainMenuUI : MonoBehaviour
     private void StartPrologue()
     {
         currentState = MenuState.InPrologue;
-        PrologueCutscene cutscene = FindObjectOfType<PrologueCutscene>();
+        PrologueCutscene cutscene = FindAnyObjectByType<PrologueCutscene>();
         if (cutscene == null)
         {
             GameObject go = new GameObject("--- PROLOGUE CUTSCENE ---");

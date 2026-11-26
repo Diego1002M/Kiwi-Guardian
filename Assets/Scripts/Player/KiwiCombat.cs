@@ -86,6 +86,9 @@ public class KiwiCombat : MonoBehaviour
 
         Vector3 spawnPos = attackSpawnPoint != null ? attackSpawnPoint.position : transform.position + (controller.IsFacingRight ? Vector3.right : Vector3.left) * 0.5f;
 
+        // Efecto visual de corte en arco (Slash arc al estilo Hollow Knight con el color del elemento actual)
+        KiwiVisualJuice.SpawnSlashArc(spawnPos, controller != null && controller.IsFacingRight, ElementalHelpers.GetColor(currentElement));
+
         SpawnDagger(spawnPos, 0f);
 
         // Si compró la mejora de dagas triples en la tienda del Mapache

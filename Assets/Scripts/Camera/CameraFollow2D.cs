@@ -3,55 +3,107 @@ using UnityEngine;
 namespace Platformer2D
 {
     /// <summary>
-    /// Cámara de seguimiento 2D suave con límites configurables y offset dinámico.
+    /// Cámara de seguimiento 2D cinemática inspirada en Hollow Knight y Celeste:
+    /// - Anticipación de movimiento (Lookahead): la cámara se adelanta en la dirección que corre Kiwi.
+    /// - Seguimiento suave y receptivo que nunca pierde de vista al personaje.
+    /// - Posicionamiento instantáneo al iniciar la escena.
+    /// - Efectos de sacudida de pantalla (Screen Shake) dinámicos para impactos épicos.
     /// </summary>
     public class CameraFollow2D : MonoBehaviour
     {
         [Header("Objetivo")]
         [SerializeField] private Transform target;
 
-        [Header("Suavizado y Desplazamiento")]
-        [SerializeField] private Vector3 offset = new Vector3(0f, 1.5f, -10f);
-        [SerializeField] private float smoothTime = 0.25f;
+        [Header("Desplazamiento y Anticipación (Lookahead)")]
+        [SerializeField] private Vector3 offset = new Vector3(0f, 1.2f, -10f);
+        [SerializeField] private float smoothTimeX = 0.12f; // Respuesta rápida en horizontal
+        [SerializeField] private float smoothTimeY = 0.18f; // Respuesta suave en vertical
+        [SerializeField] private float lookaheadDistance = 2.0f; // Distancia de adelanto hacia donde corre Kiwi
+        [SerializeField] private float lookaheadSpeed = 3.5f;
 
         [Header("Límites del Nivel (Boundaries)")]
         [SerializeField] private bool useBounds = false;
-        [SerializeField] private Vector2 minBounds = new Vector2(-10f, -5f);
-        [SerializeField] private Vector2 maxBounds = new Vector2(100f, 20f);
+        [SerializeField] private Vector2 minBounds = new Vector2(-20f, -6f);
+        [SerializeField] private Vector2 maxBounds = new Vector2(100f, 25f);
 
+        private float currentLookaheadX = 0f;
         private Vector3 currentVelocity = Vector3.zero;
+        private Rigidbody2D targetRb;
 
         private void Start()
         {
-            // Si no se asignó manualmente el target, buscar automáticamente al jugador
+            FindTarget();
+            // Centrado instantáneo inicial para que no tarde en viajar hasta Kiwi al cargar el nivel
+            if (target != null)
+            {
+                transform.position = new Vector3(target.position.x + offset.x, target.position.y + offset.y, offset.z);
+            }
+        }
+
+        private void FindTarget()
+        {
             if (target == null)
             {
                 GameObject player = GameObject.FindGameObjectWithTag("Player");
                 if (player != null)
                 {
                     target = player.transform;
+                    targetRb = player.GetComponent<Rigidbody2D>();
                 }
+            }
+            else if (targetRb == null)
+            {
+                targetRb = target.GetComponent<Rigidbody2D>();
             }
         }
 
         private void LateUpdate()
         {
-            if (target == null) return;
-
-            Vector3 targetPosition = target.position + offset;
-
-            if (useBounds)
+            if (target == null)
             {
-                targetPosition.x = Mathf.Clamp(targetPosition.x, minBounds.x, maxBounds.x);
-                targetPosition.y = Mathf.Clamp(targetPosition.y, minBounds.y, maxBounds.y);
+                FindTarget();
+                if (target == null) return;
             }
 
-            // Mantener siempre el Z de la cámara
-            targetPosition.z = offset.z;
+            // 1. Anticipación en la dirección de avance (Lookahead como en los grandes juegos 2D)
+            float moveDirection = 0f;
+            if (targetRb != null)
+            {
+                float vx = targetRb.linearVelocity.x;
+                if (Mathf.Abs(vx) > 0.5f)
+                {
+                    moveDirection = Mathf.Sign(vx);
+                }
+            }
+            else
+            {
+                moveDirection = Mathf.Sign(target.localScale.x);
+            }
 
-            transform.position = Vector3.SmoothDamp(transform.position, targetPosition, ref currentVelocity, smoothTime);
+            float targetLookaheadX = moveDirection * lookaheadDistance;
+            currentLookaheadX = Mathf.MoveTowards(currentLookaheadX, targetLookaheadX, lookaheadSpeed * Time.deltaTime);
 
-            // Efecto de sacudida de pantalla (Screen Shake)
+            // 2. Posición deseada
+            Vector3 desiredPosition = new Vector3(
+                target.position.x + offset.x + currentLookaheadX,
+                target.position.y + offset.y,
+                offset.z
+            );
+
+            // 3. Límites opcionales
+            if (useBounds)
+            {
+                desiredPosition.x = Mathf.Clamp(desiredPosition.x, minBounds.x, maxBounds.x);
+                desiredPosition.y = Mathf.Clamp(desiredPosition.y, minBounds.y, maxBounds.y);
+            }
+
+            // 4. Suavizado en X e Y
+            float newX = Mathf.SmoothDamp(transform.position.x, desiredPosition.x, ref currentVelocity.x, smoothTimeX);
+            float newY = Mathf.SmoothDamp(transform.position.y, desiredPosition.y, ref currentVelocity.y, smoothTimeY);
+
+            transform.position = new Vector3(newX, newY, offset.z);
+
+            // 5. Efecto de sacudida de pantalla (Screen Shake)
             if (shakeTimer > 0f)
             {
                 shakeTimer -= Time.deltaTime;
@@ -72,6 +124,7 @@ namespace Platformer2D
         public void SetTarget(Transform newTarget)
         {
             target = newTarget;
+            if (newTarget != null) targetRb = newTarget.GetComponent<Rigidbody2D>();
         }
 
         private void OnDrawGizmosSelected()

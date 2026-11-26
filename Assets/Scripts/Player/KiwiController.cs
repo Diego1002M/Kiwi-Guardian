@@ -66,6 +66,7 @@ public class KiwiController : MonoBehaviour
     public float DashCooldownRatio => Mathf.Clamp01((nextDashTime - Time.time) / dashCooldown);
 
     private KiwiVisualEffects visualEffects;
+    private float runDustTimer = 0f;
 
     private void Awake()
     {
@@ -141,6 +142,21 @@ public class KiwiController : MonoBehaviour
 
         // 8. Orientación del sprite
         FlipSprite();
+
+        // 9. Polvo dinámico al correr por el suelo (Efecto visual estilo Celeste / Hollow Knight)
+        if (isGrounded && Mathf.Abs(horizontalInput) > 0.15f && !isDashing)
+        {
+            runDustTimer -= Time.deltaTime;
+            if (runDustTimer <= 0f)
+            {
+                runDustTimer = 0.15f;
+                KiwiVisualJuice.SpawnRunDust(transform.position + Vector3.down * 0.45f, isFacingRight);
+            }
+        }
+        else
+        {
+            runDustTimer = 0.05f;
+        }
     }
 
     private void FixedUpdate()
@@ -244,7 +260,24 @@ public class KiwiController : MonoBehaviour
         float dashDir = isFacingRight ? 1f : -1f;
         rb.linearVelocity = new Vector2(dashDir * dashSpeed, 0f);
 
-        yield return new WaitForSeconds(dashDuration);
+        // Estela de sombras residuales (Afterimages al estilo Celeste y Mega Man X)
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        Color ghostColor = new Color(0.2f, 0.85f, 1f, 0.65f); // Tono cian acuático brillante
+        float elapsed = 0f;
+        float ghostInterval = 0.045f;
+        float ghostTimer = 0f;
+
+        while (elapsed < dashDuration)
+        {
+            ghostTimer += Time.deltaTime;
+            if (ghostTimer >= ghostInterval && sr != null && sr.sprite != null)
+            {
+                ghostTimer = 0f;
+                KiwiVisualJuice.SpawnDashGhost(transform.position, sr.sprite, sr.flipX, transform.localScale, ghostColor);
+            }
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
 
         rb.gravityScale = baseGravity;
         isDashing = false;
