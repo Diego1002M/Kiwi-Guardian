@@ -99,16 +99,16 @@ public class DaggerProjectile : MonoBehaviour
         {
             hasHit = true;
             int finalDmg = baseDamage;
-            if (ElementalHelpers.IsStrongAgainst(Element, elemental.TargetElement))
-            {
-                finalDmg *= 2; // ¡Daño crítico elemental!
-                CombatFeedback.ShowPopup(col.transform.position, "¡CRÍTICO! 2x", new Color(1f, 0.85f, 0.1f));
-                CameraFollow2D.Shake(0.2f, 0.2f);
-            }
-            else
-            {
-                CombatFeedback.ShowPopup(col.transform.position, $"{finalDmg}", Color.white);
-            }
+            bool isCrit = ElementalHelpers.IsStrongAgainst(Element, elemental.TargetElement);
+            if (isCrit) finalDmg *= 2;
+
+            CombatFeedback.ShowDamage(col.transform.position, finalDmg, isCrit);
+
+            SpriteRenderer targetSr = col.GetComponent<SpriteRenderer>();
+            if (targetSr == null) targetSr = col.GetComponentInParent<SpriteRenderer>();
+            if (targetSr != null) CombatFeedback.Flash(targetSr.GetComponent<MonoBehaviour>() ?? this, targetSr, Color.white, 0.1f);
+
+            KiwiVisualJuice.SpawnHitSparks(transform.position, ElementalHelpers.GetColor(Element));
             elemental.ApplyElementalHit(Element, finalDmg, direction);
             KiwiAudio.PlayEnemyHit();
             Destroy(gameObject);
@@ -122,7 +122,13 @@ public class DaggerProjectile : MonoBehaviour
         if (damageable != null)
         {
             hasHit = true;
-            CombatFeedback.ShowPopup(col.transform.position, $"{baseDamage}", Color.white);
+            CombatFeedback.ShowDamage(col.transform.position, baseDamage, false);
+
+            SpriteRenderer targetSr = col.GetComponent<SpriteRenderer>();
+            if (targetSr == null) targetSr = col.GetComponentInParent<SpriteRenderer>();
+            if (targetSr != null) CombatFeedback.Flash(targetSr.GetComponent<MonoBehaviour>() ?? this, targetSr, Color.white, 0.1f);
+
+            KiwiVisualJuice.SpawnHitSparks(transform.position, ElementalHelpers.GetColor(Element));
             damageable.TakeDamage(baseDamage, direction);
             KiwiAudio.PlayEnemyHit();
             Destroy(gameObject);
@@ -133,6 +139,7 @@ public class DaggerProjectile : MonoBehaviour
         if (col.CompareTag("Enemy"))
         {
             hasHit = true;
+            KiwiVisualJuice.SpawnHitSparks(transform.position, ElementalHelpers.GetColor(Element));
             Destroy(col.gameObject);
             KiwiAudio.PlayEnemyHit();
             Destroy(gameObject);

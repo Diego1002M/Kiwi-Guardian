@@ -129,6 +129,8 @@ namespace Platformer2D
             currentHealth -= amount;
             if (currentHealth < 0) currentHealth = 0;
 
+            CombatFeedback.ShowPlayerHurt(transform.position, amount);
+
             if (UIManager.Instance != null)
             {
                 UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
@@ -164,6 +166,8 @@ namespace Platformer2D
             if (isDead) return;
             currentHealth += amount;
             if (currentHealth > maxHealth) currentHealth = maxHealth;
+
+            CombatFeedback.ShowPopup(transform.position, $"+{amount} ♥", new Color(0.1f, 0.95f, 0.4f), 0.9f);
 
             if (UIManager.Instance != null)
             {

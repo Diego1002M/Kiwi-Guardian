@@ -77,6 +77,8 @@ public class PurificationAltar : MonoBehaviour
         // Audio triunfal
         KiwiAudio.PlayVictory();
         CameraFollow2D.Shake(0.4f, 0.5f);
+        KiwiVisualJuice.SpawnSeedCollectEffect(transform.position);
+        KiwiVisualJuice.SpawnSeedCollectEffect(transform.position + Vector3.up * 1.5f);
 
         ApplyPurifiedVisuals(true);
         StartCoroutine(ShowBannerRoutine());
@@ -105,10 +107,21 @@ public class PurificationAltar : MonoBehaviour
 
             ApplyPurifiedVisuals(true);
             StartCoroutine(ShowBannerRoutine());
+            StartCoroutine(VictoryCelebrationRoutine());
         }
         else
         {
             KiwiAudio.PlayDoubleJump();
+        }
+    }
+
+    private IEnumerator VictoryCelebrationRoutine()
+    {
+        for (int i = 0; i < 20; i++)
+        {
+            Vector3 burstPos = transform.position + new Vector3(Random.Range(-3f, 3f), Random.Range(0f, 3.5f), 0f);
+            KiwiVisualJuice.SpawnSeedCollectEffect(burstPos);
+            yield return new WaitForSeconds(0.15f);
         }
     }
 

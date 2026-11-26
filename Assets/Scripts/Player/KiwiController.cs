@@ -158,6 +158,7 @@ public class KiwiController : MonoBehaviour
         jumpBufferCounter = 0f;
         canDoubleJump = true;
 
+        KiwiVisualJuice.SpawnJumpDust(transform.position + Vector3.down * 0.45f, Color.white);
         visualEffects?.OnJump();
         KiwiAudio.PlayJump();
     }
@@ -169,6 +170,7 @@ public class KiwiController : MonoBehaviour
         canDoubleJump = false;
         jumpBufferCounter = 0f;
 
+        KiwiVisualJuice.SpawnJumpDust(transform.position + Vector3.down * 0.45f, new Color(0.2f, 0.85f, 1f));
         visualEffects?.OnDoubleJump();
         KiwiAudio.PlayDoubleJump();
         SpawnDoubleJumpEffect();
@@ -260,14 +262,14 @@ public class KiwiController : MonoBehaviour
 
     private void CheckGround()
     {
+        bool wasGroundedBefore = isGrounded;
+
         if (groundCheckPoint != null)
         {
             int mask = groundLayer.value != 0 ? groundLayer.value : ~LayerMask.GetMask("Player", "Ignore Raycast");
             isGrounded = Physics2D.OverlapBox(groundCheckPoint.position, groundCheckSize, 0f, mask);
-            return;
         }
-
-        if (mainCollider != null)
+        else if (mainCollider != null)
         {
             Bounds b = mainCollider.bounds;
             Vector2 origin = new Vector2(b.center.x, b.min.y + 0.05f);
@@ -282,6 +284,12 @@ public class KiwiController : MonoBehaviour
             Vector2 checkPos = (Vector2)transform.position + Vector2.down * 0.9f;
             int mask = groundLayer.value != 0 ? groundLayer.value : ~LayerMask.GetMask("Player", "Ignore Raycast");
             isGrounded = Physics2D.OverlapCircle(checkPos, 0.3f, mask);
+        }
+
+        // Si acaba de tocar tierra tras una caída
+        if (!wasGroundedBefore && isGrounded && rb != null && rb.linearVelocity.y <= 0.1f)
+        {
+            KiwiVisualJuice.SpawnLandDust(transform.position + Vector3.down * 0.45f);
         }
     }
 

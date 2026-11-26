@@ -30,6 +30,8 @@ public class EnergySeedPickup : MonoBehaviour
         {
             collected = true;
             SimpleHeartHUD.seedsCollected++;
+            CombatFeedback.ShowPopup(transform.position, "¡Semilla de Vida +1! 🌱", new Color(0.2f, 1f, 0.7f), 1.0f);
+            KiwiVisualJuice.SpawnSeedCollectEffect(transform.position);
             KiwiAudio.PlaySeed();
             Destroy(gameObject);
         }

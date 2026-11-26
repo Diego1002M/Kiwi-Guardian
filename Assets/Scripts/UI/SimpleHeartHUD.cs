@@ -132,19 +132,71 @@ public class SimpleHeartHUD : MonoBehaviour
         // 5. BARRA DE VIDA DEL JEFE
         PlasticWhaleBossAI whaleBoss = PlasticWhaleBossAI.ActiveBoss;
         ToxicHiveBossAI hiveBoss = ToxicHiveBossAI.ActiveBoss;
+        GuardianPutridoBossAI forestBoss = GuardianPutridoBossAI.ActiveBoss;
+        CombustionColossusBossAI fireBoss = CombustionColossusBossAI.ActiveBoss;
 
         if (whaleBoss != null && !whaleBoss.IsDead)
         {
             DrawBossBar(whaleBoss.transform.position, whaleBoss.CurrentHealth, whaleBoss.MaxHealth,
                 "🐋 LA BALLENA DE PLÁSTICO (Espíritu de Agua Corrompido)",
-                new Color(1f, 0.35f, 0.5f), new Color(0.85f, 0.25f, 0.75f, 0.95f));
+                new Color(0.2f, 0.85f, 1f), new Color(0.2f, 0.7f, 1f, 0.95f));
+        }
+        else if (forestBoss != null && !forestBoss.IsDead)
+        {
+            DrawBossBar(forestBoss.transform.position, forestBoss.CurrentHealth, forestBoss.MaxHealth,
+                "🌲 EL GUARDIÁN PÚTRIDO (Espíritu de Tierra Corrompido)",
+                new Color(0.3f, 1f, 0.45f), new Color(0.2f, 0.8f, 0.35f, 0.95f));
+        }
+        else if (fireBoss != null && !fireBoss.IsDead)
+        {
+            DrawBossBar(fireBoss.transform.position, fireBoss.CurrentHealth, fireBoss.MaxHealth,
+                "🔥 EL COLOSO DE COMBUSTIÓN (Espíritu de Fuego Corrompido)",
+                new Color(1f, 0.45f, 0.1f), new Color(1f, 0.3f, 0.05f, 0.95f));
         }
         else if (hiveBoss != null && !hiveBoss.IsDead)
         {
             DrawBossBar(hiveBoss.transform.position, hiveBoss.CurrentHealth, hiveBoss.MaxHealth,
-                "🔥 LA COLMENA TÓXICA (Espíritu de Fuego Corrompido)",
-                new Color(1f, 0.5f, 0.2f), new Color(1f, 0.35f, 0.1f, 0.95f));
+                "💨 EL SUPERENJAMBRE TÓXICO (Espíritu de Viento Corrompido)",
+                new Color(0.9f, 0.85f, 0.3f), new Color(0.85f, 0.75f, 0.1f, 0.95f));
         }
+
+        // 6. PANEL DE OBJETIVOS Y PROGRESIÓN (ESQUINA SUPERIOR DERECHA)
+        float objW = 230;
+        float objH = 68;
+        float objX = Screen.width - objW - 15;
+        float objY = 12;
+
+        GUI.color = new Color(0.06f, 0.1f, 0.16f, 0.88f);
+        GUI.Box(new Rect(objX, objY, objW, objH), GUIContent.none);
+        GUI.color = Color.white;
+
+        bool bWater = PlayerPrefs.GetInt("Boss_Water_Defeated", 0) == 1;
+        bool bForest = PlayerPrefs.GetInt("Boss_Forest_Defeated", 0) == 1;
+        bool bAir = PlayerPrefs.GetInt("Boss_Air_Defeated", 0) == 1;
+        bool bEarth = PlayerPrefs.GetInt("Boss_Earth_Defeated", 0) == 1;
+        int restoredCount = (bWater ? 1 : 0) + (bForest ? 1 : 0) + (bAir ? 1 : 0) + (bEarth ? 1 : 0);
+
+        GUIStyle objTitle = new GUIStyle(GUI.skin.label);
+        objTitle.fontSize = 11;
+        objTitle.fontStyle = FontStyle.Bold;
+        objTitle.normal.textColor = new Color(0.4f, 0.9f, 1f);
+        GUI.Label(new Rect(objX + 10, objY + 4, objW - 20, 18), $"🌱 ÁRBOL DE LA VIDA: {restoredCount}/4", objTitle);
+
+        string wIcon = bWater ? "<color=#3df>💧</color>" : "<color=#555>💧</color>";
+        string fIcon = bForest ? "<color=#4f6>🌿</color>" : "<color=#555>🌿</color>";
+        string aIcon = bAir ? "<color=#fff>💨</color>" : "<color=#555>💨</color>";
+        string eIcon = bEarth ? "<color=#f82>🔥</color>" : "<color=#555>🔥</color>";
+
+        GUIStyle crestStyle = new GUIStyle(GUI.skin.label);
+        crestStyle.fontSize = 15;
+        GUI.Label(new Rect(objX + 10, objY + 22, objW - 20, 24), $"{wIcon} Agua  {fIcon} Tierra  {aIcon} Aire  {eIcon} Fuego", crestStyle);
+
+        GUIStyle subObj = new GUIStyle(GUI.skin.label);
+        subObj.fontSize = 10;
+        subObj.normal.textColor = new Color(0.85f, 0.85f, 0.85f, 0.8f);
+        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        string goalText = currentScene == "ParamoToxico" ? "Entra a un portal para purificarlo" : "Purifica el Altar y vence al Jefe";
+        GUI.Label(new Rect(objX + 10, objY + 46, objW - 20, 18), $"🎯 {goalText}", subObj);
     }
 
     private void DrawBossBar(Vector3 bossPos, int currentHealth, int maxHealth, string title, Color titleColor, Color barColor)
