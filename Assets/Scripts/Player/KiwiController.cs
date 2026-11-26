@@ -47,6 +47,30 @@ public class KiwiController : MonoBehaviour
     private bool isDashing = false;
     private float nextDashTime = 0f;
 
+    [Header("Salto y Deslizamiento en Pared (Wall Slide & Wall Jump)")]
+    [SerializeField] private float wallSlideSpeed = 2.0f;
+    [SerializeField] private Vector2 wallJumpForce = new Vector2(8.5f, 12f);
+    [SerializeField] private float wallJumpDuration = 0.16f;
+
+    private bool isTouchingWall = false;
+    private int wallDirection = 0; // -1: pared a la izquierda, +1: pared a la derecha
+    private bool isWallSliding = false;
+    private float wallJumpTimer = 0f;
+    private float wallSlideDustTimer = 0f;
+    private float footstepTimer = 0f;
+
+    [Header("Game Feel: Squash & Stretch Elástico")]
+    private Vector3 currentSquashScale = Vector3.one;
+    private Vector3 baseLocalScale = Vector3.one;
+
+    public bool IsWallSliding => isWallSliding;
+    public int WallDirection => wallDirection;
+
+    public void TriggerSquashAndStretch(float xFactor, float yFactor)
+    {
+        currentSquashScale = new Vector3(xFactor, yFactor, 1f);
+    }
+
     // Componentes
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
@@ -76,6 +100,8 @@ public class KiwiController : MonoBehaviour
         visualEffects = GetComponent<KiwiVisualEffects>();
         if (visualEffects == null) visualEffects = gameObject.AddComponent<KiwiVisualEffects>();
 
+        baseLocalScale = transform.localScale;
+
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.freezeRotation = true;
@@ -89,10 +115,40 @@ public class KiwiController : MonoBehaviour
         // 1. Entrada de control horizontal (Teclas A/D, Flechas)
         horizontalInput = Input.GetAxisRaw("Horizontal");
 
-        // 2. Comprobar si Kiwi está tocando el suelo
+        // 2. Comprobar si Kiwi está tocando el suelo o paredes
         CheckGround();
+        CheckWall();
 
-        // 3. Temporizadores de Coyote Time y recarga de Sobre-Salto
+        // 3. Detección de Deslizamiento en Pared (Wall Slide al estilo Celeste / Hollow Knight)
+        bool pressingTowardWall = (horizontalInput > 0.1f && wallDirection == 1) || (horizontalInput < -0.1f && wallDirection == -1);
+        if (!isGrounded && isTouchingWall && rb.linearVelocity.y < 0.2f && (pressingTowardWall || Mathf.Abs(horizontalInput) < 0.15f))
+        {
+            if (!isWallSliding)
+            {
+                KiwiAudio.PlayWallSlide();
+                TriggerSquashAndStretch(0.9f, 1.15f);
+            }
+            isWallSliding = true;
+            canDoubleJump = true; // Agilidad: tocar pared recarga el sobre-salto estilo Celeste
+        }
+        else
+        {
+            isWallSliding = false;
+        }
+
+        // Efecto continuo de polvo al deslizarse por la pared
+        if (isWallSliding && mainCollider != null)
+        {
+            wallSlideDustTimer -= Time.deltaTime;
+            if (wallSlideDustTimer <= 0f)
+            {
+                wallSlideDustTimer = 0.08f;
+                Vector3 wallContact = new Vector3(mainCollider.bounds.center.x + wallDirection * (mainCollider.bounds.extents.x + 0.04f), mainCollider.bounds.center.y, transform.position.z);
+                KiwiVisualJuice.SpawnWallSlideDust(wallContact, wallDirection);
+            }
+        }
+
+        // 4. Temporizadores de Coyote Time y recarga de Sobre-Salto
         if (isGrounded)
         {
             coyoteTimeCounter = coyoteTime;
@@ -103,7 +159,7 @@ public class KiwiController : MonoBehaviour
             coyoteTimeCounter -= Time.deltaTime;
         }
 
-        // 4. Detección de pulsación de salto (W, Espacio, Flecha Arriba)
+        // 5. Detección de pulsación de salto (W, Espacio, Flecha Arriba)
         bool jumpPressed = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetButtonDown("Jump");
 
         if (jumpPressed)
@@ -115,35 +171,37 @@ public class KiwiController : MonoBehaviour
             jumpBufferCounter -= Time.deltaTime;
         }
 
-        // 5. Ejecutar Salto o Sobre-Salto
+        // 6. Ejecutar Salto en Pared, Salto normal o Sobre-Salto
         if (jumpBufferCounter > 0f)
         {
-            if (coyoteTimeCounter > 0f)
+            if (isWallSliding || (!isGrounded && isTouchingWall))
             {
-                // Primer Salto fijo desde el suelo
+                ExecuteWallJump();
+            }
+            else if (coyoteTimeCounter > 0f)
+            {
                 ExecuteFirstJump();
             }
             else if (hasDoubleJump && canDoubleJump)
             {
-                // ¡SOBRE-SALTO EN EL AIRE! Segundo salto con mayor impulso
                 ExecuteDoubleJump();
             }
         }
 
-        // 6. Gravedad al caer (Snappy feel sin alterar la altura fija por mantener tecla)
+        // 7. Gravedad al caer o deslizamiento en pared
         ApplyFallGravity();
 
-        // 7. Torbellino Acuático (Dash con LeftShift, L o C)
+        // 8. Torbellino Acuático (Dash con LeftShift, L o C)
         bool dashPressed = Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.L) || Input.GetKeyDown(KeyCode.C);
         if (dashPressed && Time.time >= nextDashTime && !isDashing)
         {
             StartCoroutine(DashRoutine());
         }
 
-        // 8. Orientación del sprite
+        // 9. Orientación del sprite
         FlipSprite();
 
-        // 9. Polvo dinámico al correr por el suelo (Efecto visual estilo Celeste / Hollow Knight)
+        // 10. Polvo dinámico y sonido de pasos al correr por el suelo
         if (isGrounded && Mathf.Abs(horizontalInput) > 0.15f && !isDashing)
         {
             runDustTimer -= Time.deltaTime;
@@ -152,10 +210,28 @@ public class KiwiController : MonoBehaviour
                 runDustTimer = 0.10f; // Frecuencia rítmica al compás del trote
                 KiwiVisualJuice.SpawnRunDust(GetFeetPosition(), isFacingRight);
             }
+
+            footstepTimer -= Time.deltaTime;
+            if (footstepTimer <= 0f)
+            {
+                footstepTimer = 0.22f;
+                KiwiAudio.PlayFootstep();
+            }
         }
         else
         {
             runDustTimer = 0.03f;
+            footstepTimer = 0.06f;
+        }
+
+        // 11. Deformación Elástica (Squash & Stretch) interpolada suavemente estilo resorte
+        currentSquashScale = Vector3.Lerp(currentSquashScale, Vector3.one, Time.deltaTime * 10f);
+        float faceDir = isFacingRight ? 1f : -1f;
+        transform.localScale = new Vector3(Mathf.Abs(baseLocalScale.x) * faceDir * currentSquashScale.x, baseLocalScale.y * currentSquashScale.y, baseLocalScale.z);
+
+        if (wallJumpTimer > 0f)
+        {
+            wallJumpTimer -= Time.deltaTime;
         }
     }
 
@@ -183,6 +259,7 @@ public class KiwiController : MonoBehaviour
         jumpBufferCounter = 0f;
         canDoubleJump = true;
 
+        TriggerSquashAndStretch(0.82f, 1.25f);
         KiwiVisualJuice.SpawnJumpDust(GetFeetPosition(), Color.white);
         visualEffects?.OnJump();
         KiwiAudio.PlayJump();
@@ -195,10 +272,35 @@ public class KiwiController : MonoBehaviour
         canDoubleJump = false;
         jumpBufferCounter = 0f;
 
+        TriggerSquashAndStretch(0.76f, 1.34f);
         KiwiVisualJuice.SpawnJumpDust(GetFeetPosition(), new Color(0.2f, 0.85f, 1f));
         visualEffects?.OnDoubleJump();
         KiwiAudio.PlayDoubleJump();
         SpawnDoubleJumpEffect();
+    }
+
+    private void ExecuteWallJump()
+    {
+        jumpBufferCounter = 0f;
+        coyoteTimeCounter = 0f;
+        canDoubleJump = true;
+        isWallSliding = false;
+
+        // Impulso diagonal hacia afuera de la pared
+        float jumpDirX = -wallDirection;
+        rb.linearVelocity = new Vector2(jumpDirX * wallJumpForce.x, wallJumpForce.y);
+        wallJumpTimer = wallJumpDuration;
+
+        isFacingRight = (jumpDirX > 0);
+        if (spriteRenderer != null) spriteRenderer.flipX = !isFacingRight;
+
+        KiwiAudio.PlayJump();
+        if (mainCollider != null)
+        {
+            Vector3 wallContact = new Vector3(mainCollider.bounds.center.x + wallDirection * (mainCollider.bounds.extents.x + 0.04f), mainCollider.bounds.center.y, transform.position.z);
+            KiwiVisualJuice.SpawnJumpDust(wallContact, Color.white);
+        }
+        TriggerSquashAndStretch(0.80f, 1.30f);
     }
 
     private void SpawnDoubleJumpEffect()
@@ -247,6 +349,14 @@ public class KiwiController : MonoBehaviour
 
     private void ApplyFallGravity()
     {
+        if (isWallSliding)
+        {
+            // Fricción con la pared: descenso amortiguado suave
+            rb.gravityScale = 0f;
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, -wallSlideSpeed));
+            return;
+        }
+
         // Gravedad ágil al subir y caer con proporciones equilibradas
         if (rb.linearVelocity.y < -0.01f)
         {
@@ -264,6 +374,7 @@ public class KiwiController : MonoBehaviour
         nextDashTime = Time.time + dashCooldown;
 
         KiwiAudio.PlayDash();
+        TriggerSquashAndStretch(1.38f, 0.72f);
 
         rb.gravityScale = 0f;
         float dashDir = isFacingRight ? 1f : -1f;
@@ -294,6 +405,8 @@ public class KiwiController : MonoBehaviour
 
     private void ApplyMovement()
     {
+        if (wallJumpTimer > 0f) return; // Permitir que el impulso del salto en pared no se interrumpa
+
         float targetSpeed = horizontalInput * moveSpeed;
         float speedDiff = targetSpeed - rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
@@ -332,22 +445,52 @@ public class KiwiController : MonoBehaviour
         if (!wasGroundedBefore && isGrounded && rb != null && rb.linearVelocity.y <= 0.1f)
         {
             KiwiVisualJuice.SpawnLandDust(GetFeetPosition());
+            TriggerSquashAndStretch(1.30f, 0.72f);
+        }
+    }
+
+    private void CheckWall()
+    {
+        isTouchingWall = false;
+        wallDirection = 0;
+
+        if (mainCollider == null) return;
+
+        Bounds b = mainCollider.bounds;
+        float rayDistance = 0.18f;
+        int mask = groundLayer.value != 0 ? groundLayer.value : ~LayerMask.GetMask("Player", "Ignore Raycast");
+
+        Vector2 rightOrigin = new Vector2(b.max.x, b.center.y);
+        RaycastHit2D hitRight = Physics2D.BoxCast(rightOrigin, new Vector2(0.06f, b.size.y * 0.7f), 0f, Vector2.right, rayDistance, mask);
+
+        Vector2 leftOrigin = new Vector2(b.min.x, b.center.y);
+        RaycastHit2D hitLeft = Physics2D.BoxCast(leftOrigin, new Vector2(0.06f, b.size.y * 0.7f), 0f, Vector2.left, rayDistance, mask);
+
+        if (hitRight.collider != null && hitRight.collider.gameObject != gameObject && !hitRight.collider.isTrigger)
+        {
+            isTouchingWall = true;
+            wallDirection = 1;
+        }
+        else if (hitLeft.collider != null && hitLeft.collider.gameObject != gameObject && !hitLeft.collider.isTrigger)
+        {
+            isTouchingWall = true;
+            wallDirection = -1;
         }
     }
 
     private void FlipSprite()
     {
+        if (wallJumpTimer > 0f) return;
+
         if (horizontalInput > 0.01f && !isFacingRight)
         {
             isFacingRight = true;
             if (spriteRenderer != null) spriteRenderer.flipX = false;
-            else transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
         }
         else if (horizontalInput < -0.01f && isFacingRight)
         {
             isFacingRight = false;
             if (spriteRenderer != null) spriteRenderer.flipX = true;
-            else transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
         }
     }
 

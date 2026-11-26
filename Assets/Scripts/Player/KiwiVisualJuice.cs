@@ -165,6 +165,21 @@ public class KiwiVisualJuice : MonoBehaviour
     }
 
     /// <summary>
+    /// Genera polvo continuo contra la pared mientras Kiwi se desliza hacia abajo (Wall Slide).
+    /// </summary>
+    public static void SpawnWallSlideDust(Vector3 wallPos, int wallDir)
+    {
+        if (Instance == null) return;
+        EnsureSprites();
+
+        Color dustColor = new Color(0.96f, 0.94f, 0.90f, 0.85f);
+        float side = -wallDir; // Hacia afuera de la pared
+        Vector3 spawnPos = wallPos + new Vector3(Random.Range(-0.04f, 0.04f), Random.Range(-0.05f, 0.05f), 0f);
+        Vector2 vel = new Vector2(side * Random.Range(0.4f, 1.2f), Random.Range(0.6f, 1.6f));
+        Instance.CreateDustParticle(spawnPos, vel, dustColor, Random.Range(0.28f, 0.42f), Random.Range(0.24f, 0.36f));
+    }
+
+    /// <summary>
     /// Genera una silueta fantasma translúcida (Afterimage / Ghost Trail) durante el Torbellino/Dash.
     /// </summary>
     public static void SpawnDashGhost(Vector3 pos, Sprite sprite, bool flipX, Vector3 scale, Color ghostColor)

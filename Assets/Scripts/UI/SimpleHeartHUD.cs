@@ -232,6 +232,6 @@ public class SimpleHeartHUD : MonoBehaviour
         GUIStyle hintStyle = new GUIStyle(GUI.skin.label);
         hintStyle.fontSize = 13;
         hintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
-        GUI.Label(new Rect(20, Screen.height - 42, 800, 30), "🎮 [A/D] Mover  |  [W] Salto  |  [W x2] Sobre-Salto  |  [Q / 1-4] Cambiar Elemento  |  [Shift] Torbellino  |  [J / X / Clic] Dagas", hintStyle);
+        GUI.Label(new Rect(20, Screen.height - 42, 920, 30), "🎮 [A/D] Mover  |  [W] Salto  |  [W en Pared] Salto en Pared  |  [W x2] Sobre-Salto  |  [Shift] Torbellino  |  [Q / 1-4] Elementos  |  [J / Clic] Dagas", hintStyle);
     }
 }

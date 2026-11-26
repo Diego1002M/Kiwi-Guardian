@@ -116,6 +116,25 @@ public class CombatFeedback : MonoBehaviour
     }
 
     /// <summary>
+    /// Congela momentáneamente el tiempo (Hit-Stop / Freeze Frame) en impactos contundentes estilo Hollow Knight / Smash Bros.
+    /// </summary>
+    public static void TriggerHitStop(float duration = 0.055f)
+    {
+        if (Instance != null)
+        {
+            Instance.StartCoroutine(Instance.HitStopRoutine(duration));
+        }
+    }
+
+    private IEnumerator HitStopRoutine(float duration)
+    {
+        float prevTimeScale = Time.timeScale;
+        Time.timeScale = 0.02f;
+        yield return new WaitForSecondsRealtime(duration);
+        Time.timeScale = (prevTimeScale > 0.05f) ? prevTimeScale : 1.0f;
+    }
+
+    /// <summary>
     /// Hace que el SpriteRenderer parpadee en blanco brillante o color de impacto.
     /// </summary>
     public static void Flash(MonoBehaviour caller, SpriteRenderer sr, Color flashColor, float duration = 0.09f)

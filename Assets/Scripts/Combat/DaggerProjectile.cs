@@ -106,11 +106,12 @@ public class DaggerProjectile : MonoBehaviour
 
             SpriteRenderer targetSr = col.GetComponent<SpriteRenderer>();
             if (targetSr == null) targetSr = col.GetComponentInParent<SpriteRenderer>();
-            if (targetSr != null) CombatFeedback.Flash(targetSr.GetComponent<MonoBehaviour>() ?? this, targetSr, Color.white, 0.1f);
+            if (targetSr != null) CombatFeedback.Flash(targetSr.GetComponent<MonoBehaviour>() ?? this, targetSr, Color.white, 0.12f);
 
+            CombatFeedback.TriggerHitStop(isCrit ? 0.08f : 0.055f);
             KiwiVisualJuice.SpawnHitSparks(transform.position, ElementalHelpers.GetColor(Element));
             elemental.ApplyElementalHit(Element, finalDmg, direction);
-            KiwiAudio.PlayEnemyHit();
+            KiwiAudio.PlaySlashImpact();
             Destroy(gameObject);
             return;
         }
@@ -126,11 +127,12 @@ public class DaggerProjectile : MonoBehaviour
 
             SpriteRenderer targetSr = col.GetComponent<SpriteRenderer>();
             if (targetSr == null) targetSr = col.GetComponentInParent<SpriteRenderer>();
-            if (targetSr != null) CombatFeedback.Flash(targetSr.GetComponent<MonoBehaviour>() ?? this, targetSr, Color.white, 0.1f);
+            if (targetSr != null) CombatFeedback.Flash(targetSr.GetComponent<MonoBehaviour>() ?? this, targetSr, Color.white, 0.12f);
 
+            CombatFeedback.TriggerHitStop(0.055f);
             KiwiVisualJuice.SpawnHitSparks(transform.position, ElementalHelpers.GetColor(Element));
             damageable.TakeDamage(baseDamage, direction);
-            KiwiAudio.PlayEnemyHit();
+            KiwiAudio.PlaySlashImpact();
             Destroy(gameObject);
             return;
         }
@@ -139,9 +141,10 @@ public class DaggerProjectile : MonoBehaviour
         if (col.CompareTag("Enemy"))
         {
             hasHit = true;
+            CombatFeedback.TriggerHitStop(0.05f);
             KiwiVisualJuice.SpawnHitSparks(transform.position, ElementalHelpers.GetColor(Element));
             Destroy(col.gameObject);
-            KiwiAudio.PlayEnemyHit();
+            KiwiAudio.PlaySlashImpact();
             Destroy(gameObject);
             return;
         }

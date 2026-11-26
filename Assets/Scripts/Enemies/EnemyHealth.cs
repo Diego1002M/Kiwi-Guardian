@@ -62,6 +62,20 @@ namespace Platformer2D
 
         public void TakeDamage(int damageAmount, Vector2 hitDirection)
         {
+            if (isDead) return;
+
+            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                CombatFeedback.Flash(this, sr, Color.white, 0.12f);
+            }
+
+            Rigidbody2D rb = GetComponent<Rigidbody2D>();
+            if (rb != null && rb.bodyType != RigidbodyType2D.Static)
+            {
+                rb.linearVelocity = new Vector2(hitDirection.x * 4.5f, 2.2f);
+            }
+
             TakeDamage(damageAmount);
         }
 

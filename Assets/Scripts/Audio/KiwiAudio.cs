@@ -97,6 +97,46 @@ public static class KiwiAudio
         Play(deathClip);
     }
 
+    private static AudioClip slashImpactClip;
+    public static void PlaySlashImpact()
+    {
+        if (slashImpactClip == null) slashImpactClip = CreateSlashImpact(0.12f, 0.65f);
+        Play(slashImpactClip);
+    }
+
+    private static AudioClip wallSlideClip;
+    public static void PlayWallSlide()
+    {
+        if (wallSlideClip == null) wallSlideClip = CreateNoiseWhoosh(0.12f, 0.28f);
+        Play(wallSlideClip);
+    }
+
+    private static AudioClip footstepClip;
+    public static void PlayFootstep()
+    {
+        if (footstepClip == null) footstepClip = CreateChirp(120f, 60f, 0.045f, 0.18f);
+        Play(footstepClip);
+    }
+
+    private static AudioClip CreateSlashImpact(float duration, float volume)
+    {
+        int sampleRate = 44100;
+        int sampleCount = Mathf.CeilToInt(sampleRate * duration);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / sampleCount;
+            float noise = (Random.value * 2f - 1f) * Mathf.Exp(-t * 22f);
+            float sub = Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(240f, 60f, t) * (i / (float)sampleRate)) * (1f - t);
+            samples[i] = Mathf.Clamp((noise * 0.7f + sub * 0.5f) * volume, -1f, 1f);
+        }
+
+        AudioClip clip = AudioClip.Create("SlashImpact", sampleCount, 1, sampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+
     private static void Play(AudioClip clip)
     {
         EnsureAudioSource();
