@@ -2,26 +2,25 @@ using UnityEngine;
 
 /// <summary>
 /// Controla el fondo de la escena para que persiga a Kiwi y a la cámara en todo momento.
-/// Se adapta automáticamente a la pantalla en modo Simple (una sola imagen nítida que nunca se duplica ni se corta).
+/// Se emparenta dinámicamente a la cámara principal para un seguimiento 100% perfecto,
+/// suave y sin desfases, cubriendo toda la pantalla sin duplicarse ni cortarse jamás.
 /// </summary>
 public class ParallaxBackground : MonoBehaviour
 {
-    [Header("Seguimiento del Personaje / Cámara")]
-    [Tooltip("1 = Sigue 100% a la cámara (el fondo acompaña siempre al jugador sin salirse ni duplicarse).")]
-    [Range(0f, 1f)]
-    [SerializeField] private float followSpeedX = 1.0f;
-    [Range(0f, 1f)]
-    [SerializeField] private float followSpeedY = 0.85f;
+    [Header("Ajuste y Perspectiva")]
+    [Tooltip("Distancia Z detrás de la acción del juego.")]
+    [SerializeField] private float depthZ = 12f;
 
-    [Header("Ajuste de Pantalla")]
-    [SerializeField] private bool autoFitScreen = true;
-    [SerializeField] private float sizeMultiplier = 1.4f; // Margen para que nunca se vean bordes
-    [SerializeField] private float depthZ = 12f; // Posición Z profunda detrás del escenario
+    [Tooltip("Desplazamiento vertical opcional.")]
+    [SerializeField] private float yOffset = 0f;
+
+    [Tooltip("Multiplicador de tamaño para garantizar que no queden bordes negros.")]
+    [SerializeField] private float sizeMultiplier = 1.35f;
 
     private Camera targetCamera;
     private SpriteRenderer spriteRenderer;
-    private Vector3 initialCamPos;
-    private Vector3 initialBgPos;
+    private float lastAspect = -1f;
+    private float lastOrthoSize = -1f;
 
     private void Awake()
     {
@@ -36,27 +35,46 @@ public class ParallaxBackground : MonoBehaviour
 
     private void Start()
     {
-        FindCam();
-        if (targetCamera != null)
-        {
-            initialCamPos = targetCamera.transform.position;
-            initialBgPos = transform.position;
-            FitToCamera();
-        }
+        AttachToCamera();
     }
 
-    private void FindCam()
+    private void OnEnable()
+    {
+        AttachToCamera();
+    }
+
+    private void AttachToCamera()
     {
         if (targetCamera == null)
         {
             targetCamera = Camera.main;
         }
+
+        if (targetCamera != null)
+        {
+            // Emparentar directamente a la cámara para seguimiento 1:1 instantáneo y sin temblores
+            transform.SetParent(targetCamera.transform, false);
+            transform.localPosition = new Vector3(0f, yOffset, depthZ);
+            transform.localRotation = Quaternion.identity;
+            FitToCamera();
+        }
     }
 
     public void FitToCamera()
     {
-        FindCam();
-        if (targetCamera == null || spriteRenderer == null || spriteRenderer.sprite == null || !autoFitScreen) return;
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main;
+            if (targetCamera == null) return;
+        }
+
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (spriteRenderer == null || spriteRenderer.sprite == null) return;
+
+        lastAspect = targetCamera.aspect;
+        lastOrthoSize = targetCamera.orthographicSize;
 
         float camHeight = targetCamera.orthographicSize * 2f;
         float camWidth = camHeight * targetCamera.aspect;
@@ -64,7 +82,7 @@ public class ParallaxBackground : MonoBehaviour
         float spriteW = spriteRenderer.sprite.rect.width / spriteRenderer.sprite.pixelsPerUnit;
         float spriteH = spriteRenderer.sprite.rect.height / spriteRenderer.sprite.pixelsPerUnit;
 
-        if (spriteW > 0 && spriteH > 0)
+        if (spriteW > 0.001f && spriteH > 0.001f)
         {
             float scaleX = (camWidth / spriteW) * sizeMultiplier;
             float scaleY = (camHeight / spriteH) * sizeMultiplier;
@@ -75,16 +93,31 @@ public class ParallaxBackground : MonoBehaviour
 
     private void LateUpdate()
     {
-        FindCam();
-        if (targetCamera == null) return;
+        if (targetCamera == null)
+        {
+            AttachToCamera();
+            return;
+        }
 
-        Vector3 camPos = targetCamera.transform.position;
-        Vector3 delta = camPos - initialCamPos;
+        // Si por alguna razón se desvinculó de la cámara, re-emparentar o seguir posición
+        if (transform.parent != targetCamera.transform)
+        {
+            transform.SetParent(targetCamera.transform, false);
+            transform.localPosition = new Vector3(0f, yOffset, depthZ);
+        }
+        else
+        {
+            // Mantener centrado exacto
+            if (transform.localPosition.x != 0f || transform.localPosition.y != yOffset || transform.localPosition.z != depthZ)
+            {
+                transform.localPosition = new Vector3(0f, yOffset, depthZ);
+            }
+        }
 
-        // El fondo persigue la posición de la cámara / Kiwi para que siempre esté visible y centrado
-        float newX = initialBgPos.x + delta.x * followSpeedX;
-        float newY = initialBgPos.y + delta.y * followSpeedY;
-
-        transform.position = new Vector3(newX, newY, depthZ);
+        // Reajustar tamaño si la resolución o aspect ratio cambia en tiempo real
+        if (Mathf.Abs(targetCamera.aspect - lastAspect) > 0.01f || Mathf.Abs(targetCamera.orthographicSize - lastOrthoSize) > 0.01f)
+        {
+            FitToCamera();
+        }
     }
 }
