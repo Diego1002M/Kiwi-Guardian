@@ -121,7 +121,9 @@ public class KiwiController : MonoBehaviour
 
         // 3. Detección de Deslizamiento en Pared (Wall Slide al estilo Celeste / Hollow Knight)
         bool pressingTowardWall = (horizontalInput > 0.1f && wallDirection == 1) || (horizontalInput < -0.1f && wallDirection == -1);
-        if (!isGrounded && isTouchingWall && rb.linearVelocity.y < 0.2f && (pressingTowardWall || Mathf.Abs(horizontalInput) < 0.15f))
+        bool pressingAwayFromWall = (horizontalInput < -0.1f && wallDirection == 1) || (horizontalInput > 0.1f && wallDirection == -1);
+
+        if (!isGrounded && isTouchingWall && !pressingAwayFromWall)
         {
             if (!isWallSliding)
             {
@@ -226,8 +228,7 @@ public class KiwiController : MonoBehaviour
 
         // 11. Deformación Elástica (Squash & Stretch) interpolada suavemente estilo resorte
         currentSquashScale = Vector3.Lerp(currentSquashScale, Vector3.one, Time.deltaTime * 10f);
-        float faceDir = isFacingRight ? 1f : -1f;
-        transform.localScale = new Vector3(Mathf.Abs(baseLocalScale.x) * faceDir * currentSquashScale.x, baseLocalScale.y * currentSquashScale.y, baseLocalScale.z);
+        transform.localScale = new Vector3(Mathf.Abs(baseLocalScale.x) * currentSquashScale.x, baseLocalScale.y * currentSquashScale.y, baseLocalScale.z);
 
         if (wallJumpTimer > 0f)
         {
@@ -351,9 +352,14 @@ public class KiwiController : MonoBehaviour
     {
         if (isWallSliding)
         {
-            // Fricción con la pared: descenso amortiguado suave
+            // Descenso activo por la pared: Kiwi siempre resbala suavemente hacia abajo y nunca se queda congelado
             rb.gravityScale = 0f;
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, -wallSlideSpeed));
+            float slideSpeed = wallSlideSpeed;
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+            {
+                slideSpeed *= 1.8f; // Deslizarse más rápido al pulsar abajo
+            }
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, -slideSpeed);
             return;
         }
 
@@ -482,15 +488,18 @@ public class KiwiController : MonoBehaviour
     {
         if (wallJumpTimer > 0f) return;
 
-        if (horizontalInput > 0.01f && !isFacingRight)
+        if (horizontalInput > 0.05f)
         {
             isFacingRight = true;
-            if (spriteRenderer != null) spriteRenderer.flipX = false;
         }
-        else if (horizontalInput < -0.01f && isFacingRight)
+        else if (horizontalInput < -0.05f)
         {
             isFacingRight = false;
-            if (spriteRenderer != null) spriteRenderer.flipX = true;
+        }
+
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.flipX = !isFacingRight;
         }
     }
 
