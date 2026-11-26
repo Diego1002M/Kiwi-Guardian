@@ -25,24 +25,9 @@ public class WorldMapUI : MonoBehaviour
 
     private void OnGUI()
     {
+        // Si el mapa no está abierto, no dibujar nada (el HUD principal ya integra el recordatorio [M])
         if (!isMapOpen)
         {
-            // Recordatorio estilizado justo debajo del panel de objetivos
-            float hintW = 150;
-            float hintH = 24;
-            float hintX = Screen.width - hintW - 15;
-            float hintY = 90; // Debajo del panel del Árbol de la Vida (12 + 72 + 6)
-
-            GUI.color = new Color(0.06f, 0.1f, 0.16f, 0.88f);
-            GUI.Box(new Rect(hintX, hintY, hintW, hintH), GUIContent.none);
-            GUI.color = Color.white;
-
-            GUIStyle mapHintStyle = new GUIStyle(GUI.skin.label);
-            mapHintStyle.fontSize = 11;
-            mapHintStyle.fontStyle = FontStyle.Bold;
-            mapHintStyle.alignment = TextAnchor.MiddleCenter;
-            mapHintStyle.normal.textColor = new Color(0.35f, 0.95f, 1f, 0.95f);
-            GUI.Label(new Rect(hintX, hintY, hintW, hintH), "🗺️ Mapa: Pulsa [M]", mapHintStyle);
             return;
         }
 

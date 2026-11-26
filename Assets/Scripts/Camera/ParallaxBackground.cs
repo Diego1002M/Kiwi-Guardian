@@ -52,10 +52,9 @@ public class ParallaxBackground : MonoBehaviour
 
         if (targetCamera != null)
         {
-            // Emparentar directamente a la cámara para seguimiento 1:1 instantáneo y sin temblores
-            transform.SetParent(targetCamera.transform, false);
-            transform.localPosition = new Vector3(0f, yOffset, depthZ);
-            transform.localRotation = Quaternion.identity;
+            // Seguimiento por coordenadas en el espacio mundial (sin emparentar para no fugar jerarquías entre escenas)
+            transform.position = new Vector3(targetCamera.transform.position.x, targetCamera.transform.position.y + yOffset, depthZ);
+            transform.rotation = Quaternion.identity;
             FitToCamera();
         }
     }
@@ -96,23 +95,12 @@ public class ParallaxBackground : MonoBehaviour
         if (targetCamera == null)
         {
             AttachToCamera();
-            return;
+            if (targetCamera == null) return;
         }
 
-        // Si por alguna razón se desvinculó de la cámara, re-emparentar o seguir posición
-        if (transform.parent != targetCamera.transform)
-        {
-            transform.SetParent(targetCamera.transform, false);
-            transform.localPosition = new Vector3(0f, yOffset, depthZ);
-        }
-        else
-        {
-            // Mantener centrado exacto
-            if (transform.localPosition.x != 0f || transform.localPosition.y != yOffset || transform.localPosition.z != depthZ)
-            {
-                transform.localPosition = new Vector3(0f, yOffset, depthZ);
-            }
-        }
+        // Posicionar el fondo en la cámara suavemente en cada frame
+        Vector3 camPos = targetCamera.transform.position;
+        transform.position = new Vector3(camPos.x, camPos.y + yOffset, depthZ);
 
         // Reajustar tamaño si la resolución o aspect ratio cambia en tiempo real
         if (Mathf.Abs(targetCamera.aspect - lastAspect) > 0.01f || Mathf.Abs(targetCamera.orthographicSize - lastOrthoSize) > 0.01f)

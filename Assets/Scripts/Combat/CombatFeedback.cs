@@ -44,6 +44,20 @@ public class CombatFeedback : MonoBehaviour
 
     private void Awake()
     {
+        // Si este script está en una cámara o un objeto de escena, NUNCA volver inmortal todo el GameObject
+        // Solo el objeto raíz dedicado "--- COMBAT FEEDBACK ---" debe ser DontDestroyOnLoad
+        if (GetComponent<Camera>() != null || transform.parent != null || gameObject.name != "--- COMBAT FEEDBACK ---")
+        {
+            if (instance != null && instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            instance = this;
+            mainCam = GetComponent<Camera>() ?? Camera.main;
+            return;
+        }
+
         if (instance != null && instance != this)
         {
             Destroy(gameObject);

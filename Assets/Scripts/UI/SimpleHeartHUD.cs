@@ -135,84 +135,102 @@ public class SimpleHeartHUD : MonoBehaviour
         GuardianPutridoBossAI forestBoss = GuardianPutridoBossAI.ActiveBoss;
         CombustionColossusBossAI fireBoss = CombustionColossusBossAI.ActiveBoss;
 
+        bool isBossInCombat = false;
         if (whaleBoss != null && !whaleBoss.IsDead)
         {
-            DrawBossBar(whaleBoss.transform.position, whaleBoss.CurrentHealth, whaleBoss.MaxHealth,
+            isBossInCombat = DrawBossBar(whaleBoss.transform.position, whaleBoss.CurrentHealth, whaleBoss.MaxHealth,
                 "🐋 LA BALLENA DE PLÁSTICO (Espíritu de Agua Corrompido)",
                 new Color(0.2f, 0.85f, 1f), new Color(0.2f, 0.7f, 1f, 0.95f));
         }
         else if (forestBoss != null && !forestBoss.IsDead)
         {
-            DrawBossBar(forestBoss.transform.position, forestBoss.CurrentHealth, forestBoss.MaxHealth,
+            isBossInCombat = DrawBossBar(forestBoss.transform.position, forestBoss.CurrentHealth, forestBoss.MaxHealth,
                 "🌲 EL GUARDIÁN PÚTRIDO (Espíritu de Tierra Corrompido)",
                 new Color(0.3f, 1f, 0.45f), new Color(0.2f, 0.8f, 0.35f, 0.95f));
         }
         else if (fireBoss != null && !fireBoss.IsDead)
         {
-            DrawBossBar(fireBoss.transform.position, fireBoss.CurrentHealth, fireBoss.MaxHealth,
+            isBossInCombat = DrawBossBar(fireBoss.transform.position, fireBoss.CurrentHealth, fireBoss.MaxHealth,
                 "🔥 EL COLOSO DE COMBUSTIÓN (Espíritu de Fuego Corrompido)",
                 new Color(1f, 0.45f, 0.1f), new Color(1f, 0.3f, 0.05f, 0.95f));
         }
         else if (hiveBoss != null && !hiveBoss.IsDead)
         {
-            DrawBossBar(hiveBoss.transform.position, hiveBoss.CurrentHealth, hiveBoss.MaxHealth,
+            isBossInCombat = DrawBossBar(hiveBoss.transform.position, hiveBoss.CurrentHealth, hiveBoss.MaxHealth,
                 "💨 EL SUPERENJAMBRE TÓXICO (Espíritu de Viento Corrompido)",
                 new Color(0.9f, 0.85f, 0.3f), new Color(0.85f, 0.75f, 0.1f, 0.95f));
         }
 
         // 6. PANEL DE OBJETIVOS Y PROGRESIÓN (ESQUINA SUPERIOR DERECHA)
-        float objW = 255;
-        float objH = 72;
-        float objX = Screen.width - objW - 15;
-        float objY = 12;
+        // Durante el combate activo contra el Jefe, ocultamos los objetivos generales para dar foco 100% cinematográfico al combate y evitar cualquier solapamiento
+        if (!isBossInCombat)
+        {
+            float objW = 255;
+            float objH = 88;
+            float objX = Screen.width - objW - 15;
+            float objY = 12;
 
-        GUI.color = new Color(0.06f, 0.1f, 0.16f, 0.88f);
-        GUI.Box(new Rect(objX, objY, objW, objH), GUIContent.none);
-        GUI.color = Color.white;
+            GUI.color = new Color(0.06f, 0.1f, 0.16f, 0.92f);
+            GUI.Box(new Rect(objX, objY, objW, objH), GUIContent.none);
+            GUI.color = Color.white;
 
-        bool bWater = PlayerPrefs.GetInt("Boss_Water_Defeated", 0) == 1;
-        bool bForest = PlayerPrefs.GetInt("Boss_Forest_Defeated", 0) == 1;
-        bool bAir = PlayerPrefs.GetInt("Boss_Air_Defeated", 0) == 1;
-        bool bEarth = PlayerPrefs.GetInt("Boss_Earth_Defeated", 0) == 1;
-        int restoredCount = (bWater ? 1 : 0) + (bForest ? 1 : 0) + (bAir ? 1 : 0) + (bEarth ? 1 : 0);
+            bool bWater = PlayerPrefs.GetInt("Boss_Water_Defeated", 0) == 1;
+            bool bForest = PlayerPrefs.GetInt("Boss_Forest_Defeated", 0) == 1;
+            bool bAir = PlayerPrefs.GetInt("Boss_Air_Defeated", 0) == 1;
+            bool bEarth = PlayerPrefs.GetInt("Boss_Earth_Defeated", 0) == 1;
+            int restoredCount = (bWater ? 1 : 0) + (bForest ? 1 : 0) + (bAir ? 1 : 0) + (bEarth ? 1 : 0);
 
-        GUIStyle objTitle = new GUIStyle(GUI.skin.label);
-        objTitle.fontSize = 11;
-        objTitle.fontStyle = FontStyle.Bold;
-        objTitle.normal.textColor = new Color(0.4f, 0.9f, 1f);
-        GUI.Label(new Rect(objX + 10, objY + 4, objW - 20, 18), $"🌱 ÁRBOL DE LA VIDA: {restoredCount}/4", objTitle);
+            GUIStyle objTitle = new GUIStyle(GUI.skin.label);
+            objTitle.fontSize = 11;
+            objTitle.fontStyle = FontStyle.Bold;
+            objTitle.normal.textColor = new Color(0.4f, 0.9f, 1f);
+            GUI.Label(new Rect(objX + 10, objY + 4, objW - 20, 18), $"🌱 ÁRBOL DE LA VIDA: {restoredCount}/4", objTitle);
 
-        string wIcon = bWater ? "<color=#3df>💧</color>" : "<color=#555>💧</color>";
-        string fIcon = bForest ? "<color=#4f6>🌿</color>" : "<color=#555>🌿</color>";
-        string aIcon = bAir ? "<color=#fff>💨</color>" : "<color=#555>💨</color>";
-        string eIcon = bEarth ? "<color=#f82>🔥</color>" : "<color=#555>🔥</color>";
+            string wIcon = bWater ? "<color=#3df>💧</color>" : "<color=#555>💧</color>";
+            string fIcon = bForest ? "<color=#4f6>🌿</color>" : "<color=#555>🌿</color>";
+            string aIcon = bAir ? "<color=#fff>💨</color>" : "<color=#555>💨</color>";
+            string eIcon = bEarth ? "<color=#f82>🔥</color>" : "<color=#555>🔥</color>";
 
-        GUIStyle crestStyle = new GUIStyle(GUI.skin.label);
-        crestStyle.fontSize = 15;
-        GUI.Label(new Rect(objX + 10, objY + 22, objW - 20, 24), $"{wIcon} Agua  {fIcon} Tierra  {aIcon} Aire  {eIcon} Fuego", crestStyle);
+            GUIStyle crestStyle = new GUIStyle(GUI.skin.label);
+            crestStyle.fontSize = 15;
+            GUI.Label(new Rect(objX + 10, objY + 22, objW - 20, 24), $"{wIcon} Agua  {fIcon} Tierra  {aIcon} Aire  {eIcon} Fuego", crestStyle);
 
-        GUIStyle subObj = new GUIStyle(GUI.skin.label);
-        subObj.fontSize = 10;
-        subObj.normal.textColor = new Color(0.85f, 0.85f, 0.85f, 0.8f);
-        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        string goalText = currentScene == "ParamoToxico" ? "Entra a un portal para purificarlo" : "Purifica el Altar y vence al Jefe";
-        GUI.Label(new Rect(objX + 10, objY + 46, objW - 20, 18), $"🎯 {goalText}", subObj);
+            GUIStyle subObj = new GUIStyle(GUI.skin.label);
+            subObj.fontSize = 10;
+            subObj.normal.textColor = new Color(0.85f, 0.85f, 0.85f, 0.8f);
+            string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            string goalText = currentScene == "ParamoToxico" ? "Entra a un portal para purificarlo" : "Purifica el Altar y vence al Jefe";
+            GUI.Label(new Rect(objX + 10, objY + 46, objW - 20, 18), $"🎯 {goalText}", subObj);
+
+            // Recordatorio de Mapa Mundial integrado limpiamente sin solapamiento
+            GUIStyle mapStyle = new GUIStyle(GUI.skin.label);
+            mapStyle.fontSize = 10;
+            mapStyle.fontStyle = FontStyle.Bold;
+            mapStyle.normal.textColor = new Color(0.35f, 0.95f, 1f, 0.95f);
+            GUI.Label(new Rect(objX + 10, objY + 66, objW - 20, 18), "🗺️ Mapa Mundial: Pulsa [M]", mapStyle);
+        }
+
+        // 7. GUÍA RÁPIDA DE CONTROLES (PARTE INFERIOR)
+        GUIStyle hintStyle = new GUIStyle(GUI.skin.label);
+        hintStyle.fontSize = 12;
+        hintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
+        GUI.Label(new Rect(20, Screen.height - 38, 920, 30), "🎮 [A/D] Mover  |  [W] Salto  |  [W en Pared] Salto en Pared  |  [W x2] Sobre-Salto  |  [Shift] Torbellino  |  [Q / 1-4] Elementos  |  [J / Clic] Dagas", hintStyle);
     }
 
-    private void DrawBossBar(Vector3 bossPos, int currentHealth, int maxHealth, string title, Color titleColor, Color barColor)
+    private bool DrawBossBar(Vector3 bossPos, int currentHealth, int maxHealth, string title, Color titleColor, Color barColor)
     {
         float bossDist = Vector2.Distance(bossPos, playerHealth.transform.position);
-        if (bossDist <= 24f)
+        if (bossDist <= 26f)
         {
-            float barWidth = Mathf.Min(450, Screen.width - 60);
+            float barWidth = Mathf.Clamp(Screen.width - 280, 260, 480);
             float barX = (Screen.width - barWidth) / 2f;
-            float barY = 20;
+            float barY = 16;
 
-            GUI.color = new Color(0.06f, 0.1f, 0.16f, 0.9f);
-            GUI.Box(new Rect(barX - 6, barY - 6, barWidth + 12, 48), GUIContent.none);
+            GUI.color = new Color(0.06f, 0.1f, 0.16f, 0.94f);
+            GUI.Box(new Rect(barX - 8, barY - 6, barWidth + 16, 52), GUIContent.none);
 
             GUIStyle bossNameStyle = new GUIStyle(GUI.skin.label);
-            bossNameStyle.fontSize = 13;
+            bossNameStyle.fontSize = 12;
             bossNameStyle.fontStyle = FontStyle.Bold;
             bossNameStyle.alignment = TextAnchor.MiddleCenter;
             bossNameStyle.normal.textColor = titleColor;
@@ -220,18 +238,23 @@ public class SimpleHeartHUD : MonoBehaviour
             GUI.Label(new Rect(barX, barY - 2, barWidth, 20), title, bossNameStyle);
 
             float fillRatio = Mathf.Clamp01((float)currentHealth / maxHealth);
-            GUI.color = new Color(0.2f, 0.05f, 0.05f, 0.8f);
-            GUI.Box(new Rect(barX, barY + 18, barWidth, 18), GUIContent.none);
+            GUI.color = new Color(0.2f, 0.05f, 0.05f, 0.85f);
+            GUI.Box(new Rect(barX, barY + 20, barWidth, 18), GUIContent.none);
 
-            GUI.color = (fillRatio <= 0.4f) ? new Color(1f, 0.15f, 0.15f, 0.95f) : barColor;
-            GUI.Box(new Rect(barX, barY + 18, barWidth * fillRatio, 18), GUIContent.none);
+            GUI.color = (fillRatio <= 0.4f) ? new Color(1f, 0.2f, 0.2f, 0.95f) : barColor;
+            GUI.Box(new Rect(barX, barY + 20, barWidth * fillRatio, 18), GUIContent.none);
+
+            // Valor numérico de salud del jefe
+            GUIStyle healthNumberStyle = new GUIStyle(GUI.skin.label);
+            healthNumberStyle.fontSize = 11;
+            healthNumberStyle.fontStyle = FontStyle.Bold;
+            healthNumberStyle.alignment = TextAnchor.MiddleCenter;
+            healthNumberStyle.normal.textColor = Color.white;
             GUI.color = Color.white;
-        }
+            GUI.Label(new Rect(barX, barY + 20, barWidth, 18), $"{currentHealth} / {maxHealth}", healthNumberStyle);
 
-        // 6. GUÍA RÁPIDA DE CONTROLES
-        GUIStyle hintStyle = new GUIStyle(GUI.skin.label);
-        hintStyle.fontSize = 13;
-        hintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
-        GUI.Label(new Rect(20, Screen.height - 42, 920, 30), "🎮 [A/D] Mover  |  [W] Salto  |  [W en Pared] Salto en Pared  |  [W x2] Sobre-Salto  |  [Shift] Torbellino  |  [Q / 1-4] Elementos  |  [J / Clic] Dagas", hintStyle);
+            return true;
+        }
+        return false;
     }
 }
